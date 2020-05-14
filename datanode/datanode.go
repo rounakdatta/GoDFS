@@ -1,13 +1,14 @@
-package main
+package datanode
 
 import (
 	"bufio"
 	"io/ioutil"
 	"os"
 )
-type DataNodeService struct {
-	DataDirectory string
-	ServicePort uint16
+
+type Service struct {
+	dataDirectory string
+	ServicePort   uint16
 }
 
 func check(e error) {
@@ -16,11 +17,11 @@ func check(e error) {
 	}
 }
 
-func (dataNode *DataNodeService) forwardForReplication(blockId string, data string, replicationNodes []string) {
+func (dataNode *Service) forwardForReplication(blockId string, data string, replicationNodes []Service) {
 }
 
-func (dataNode *DataNodeService) putData(blockId string, data string, replicationNodes []string) {
-	fileWriteHandler, err := os.Create(dataNode.DataDirectory + blockId)
+func (dataNode *Service) putData(blockId string, data string, replicationNodes []Service) {
+	fileWriteHandler, err := os.Create(dataNode.dataDirectory + blockId)
 	check(err)
 	defer fileWriteHandler.Close()
 
@@ -32,13 +33,10 @@ func (dataNode *DataNodeService) putData(blockId string, data string, replicatio
 	dataNode.forwardForReplication(blockId, data, replicationNodes)
 }
 
-func (dataNode *DataNodeService) getData(blockId string) (data string) {
-	dataBytes, err := ioutil.ReadFile(dataNode.DataDirectory + blockId)
+func (dataNode *Service) getData(blockId string) (data string) {
+	dataBytes, err := ioutil.ReadFile(dataNode.dataDirectory + blockId)
 	check(err)
 
 	data = string(dataBytes)
 	return data
-}
-
-func main() {
 }
