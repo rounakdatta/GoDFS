@@ -2,8 +2,8 @@ package namenode
 
 import (
 	"../datanode"
-	"math"
 	"github.com/google/uuid"
+	"math"
 	"math/rand"
 )
 
@@ -12,17 +12,26 @@ type DataNodeInstance struct {
 	DataNode datanode.Service
 }
 
+type NameNodeMetaData struct {
+	BlockId string
+	BlockAddresses []DataNodeInstance
+}
+
+type NameNodeReadRequest struct {
+	FileName string
+}
+
+type NameNodeWriteRequest struct {
+	FileName string
+	FileSize uint64
+}
+
 type Service struct {
 	BlockSize          uint64
 	ReplicationFactor  uint8
 	IdToDataNodes      map[uint64]DataNodeInstance
 	FileNameToBlocks   map[string][]string
 	BlockToDataNodeIds map[string][]uint64
-}
-
-type MetaData struct {
-	BlockId string
-	BlockAddresses []DataNodeInstance
 }
 
 func selectRandomNumbers(n uint64, count uint8)(randomNumberSet []uint64) {
@@ -38,8 +47,8 @@ func selectRandomNumbers(n uint64, count uint8)(randomNumberSet []uint64) {
 	return
 }
 
-func (nameNode *Service) readData(fileName string)(metadata []MetaData) {
-	fileBlocks := nameNode.FileNameToBlocks[fileName]
+func (nameNode *Service) ReadData(request *NameNodeReadRequest, reply *[]NameNodeMetaData) error {
+	fileBlocks := nameNode.FileNameToBlocks[request.FileName]
 
 	for _, block := range fileBlocks {
 		var blockAddresses []DataNodeInstance
@@ -49,19 +58,20 @@ func (nameNode *Service) readData(fileName string)(metadata []MetaData) {
 			blockAddresses = append(blockAddresses, nameNode.IdToDataNodes[dataNodeId])
 		}
 
-		metadata = append(metadata, MetaData{block, blockAddresses})
+		*reply = append(*reply, NameNodeMetaData{BlockId: block, BlockAddresses: blockAddresses})
 	}
-	return
+	return nil
 }
 
-func (nameNode *Service) writeData(fileName string, fileSize uint64) []MetaData {
-	nameNode.FileNameToBlocks[fileName] = []string{}
+func (nameNode *Service) WriteData(request *NameNodeWriteRequest, reply *[]NameNodeMetaData) error {
+	nameNode.FileNameToBlocks[request.FileName] = []string{}
 
-	numberOfBlocksToAllocate := uint64(math.Ceil(float64(fileSize / nameNode.BlockSize)))
-	return nameNode.allocateBlocks(fileName, numberOfBlocksToAllocate)
+	numberOfBlocksToAllocate := uint64(math.Ceil(float64(request.FileSize / nameNode.BlockSize)))
+	*reply = nameNode.allocateBlocks(request.FileName, numberOfBlocksToAllocate)
+	return nil
 }
 
-func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64)(metadata []MetaData) {
+func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64)(metadata []NameNodeMetaData) {
 	nameNode.FileNameToBlocks[fileName] = []string{}
 	dataNodesAvailable := uint64(len(nameNode.IdToDataNodes))
 
@@ -77,7 +87,7 @@ func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64)(
 			blockAddresses = append(blockAddresses, nameNode.IdToDataNodes[dataNodeId])
 		}
 
-		metadata = append(metadata, MetaData{blockId, blockAddresses})
+		metadata = append(metadata, NameNodeMetaData{BlockId: blockId, BlockAddresses: blockAddresses})
 	}
 	return
 }

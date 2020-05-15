@@ -1,6 +1,7 @@
 package datanode
 
 import (
+	"../utils"
 	"bufio"
 	"io/ioutil"
 	"os"
@@ -11,32 +12,46 @@ type Service struct {
 	ServicePort   uint16
 }
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
+type DataNodePutRequest struct {
+	BlockId string
+	Data string
+	ReplicationNodes []Service
 }
 
-func (dataNode *Service) forwardForReplication(blockId string, data string, replicationNodes []Service) {
+type DataNodeGetRequest struct {
+	BlockId string
 }
 
-func (dataNode *Service) putData(blockId string, data string, replicationNodes []Service) {
-	fileWriteHandler, err := os.Create(dataNode.dataDirectory + blockId)
-	check(err)
+type DataNodeWriteStatus struct {
+	Status bool
+}
+
+type DataNodeData struct {
+	Data string
+}
+
+func (dataNode *Service) forwardForReplication(request *DataNodePutRequest, reply *DataNodeWriteStatus) error {
+	return nil
+}
+
+func (dataNode *Service) PutData(request *DataNodePutRequest, reply *DataNodeWriteStatus) error {
+	fileWriteHandler, err := os.Create(dataNode.dataDirectory + request.BlockId)
+	utils.Check(err)
 	defer fileWriteHandler.Close()
 
 	fileWriter := bufio.NewWriter(fileWriteHandler)
-	_, err = fileWriter.WriteString(data)
-	check(err)
+	_, err = fileWriter.WriteString(request.Data)
+	utils.Check(err)
 	fileWriter.Flush()
+	*reply = DataNodeWriteStatus{Status: true}
 
-	dataNode.forwardForReplication(blockId, data, replicationNodes)
+	return dataNode.forwardForReplication(request, reply)
 }
 
-func (dataNode *Service) getData(blockId string) (data string) {
-	dataBytes, err := ioutil.ReadFile(dataNode.dataDirectory + blockId)
-	check(err)
+func (dataNode *Service) GetData(request *DataNodeGetRequest, reply *DataNodeData) error {
+	dataBytes, err := ioutil.ReadFile(dataNode.dataDirectory + request.BlockId)
+	utils.Check(err)
 
-	data = string(dataBytes)
-	return data
+	*reply = DataNodeData{Data: string(dataBytes)}
+	return nil
 }
