@@ -47,6 +47,13 @@ func selectRandomNumbers(n uint64, count uint8)(randomNumberSet []uint64) {
 	return
 }
 
+func (nameNode *Service) GetBlockSize(request bool, reply *uint64) error {
+	if request {
+		*reply = nameNode.BlockSize
+	}
+	return nil
+}
+
 func (nameNode *Service) ReadData(request *NameNodeReadRequest, reply *[]NameNodeMetaData) error {
 	fileBlocks := nameNode.FileNameToBlocks[request.FileName]
 

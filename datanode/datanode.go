@@ -8,7 +8,7 @@ import (
 )
 
 type Service struct {
-	dataDirectory string
+	DataDirectory string
 	ServicePort   uint16
 }
 
@@ -35,7 +35,7 @@ func (dataNode *Service) forwardForReplication(request *DataNodePutRequest, repl
 }
 
 func (dataNode *Service) PutData(request *DataNodePutRequest, reply *DataNodeWriteStatus) error {
-	fileWriteHandler, err := os.Create(dataNode.dataDirectory + request.BlockId)
+	fileWriteHandler, err := os.Create(dataNode.DataDirectory + request.BlockId)
 	utils.Check(err)
 	defer fileWriteHandler.Close()
 
@@ -49,7 +49,7 @@ func (dataNode *Service) PutData(request *DataNodePutRequest, reply *DataNodeWri
 }
 
 func (dataNode *Service) GetData(request *DataNodeGetRequest, reply *DataNodeData) error {
-	dataBytes, err := ioutil.ReadFile(dataNode.dataDirectory + request.BlockId)
+	dataBytes, err := ioutil.ReadFile(dataNode.DataDirectory + request.BlockId)
 	utils.Check(err)
 
 	*reply = DataNodeData{Data: string(dataBytes)}
