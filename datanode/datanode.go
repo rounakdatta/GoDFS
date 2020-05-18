@@ -15,7 +15,7 @@ type Service struct {
 type DataNodePutRequest struct {
 	BlockId string
 	Data string
-	ReplicationNodes []Service
+	ReplicationNodes []utils.DataNodeInstance
 }
 
 type DataNodeGetRequest struct {

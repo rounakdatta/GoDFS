@@ -1,20 +1,15 @@
 package namenode
 
 import (
-	"../datanode"
+	"../utils"
 	"github.com/google/uuid"
 	"math"
 	"math/rand"
 )
 
-type DataNodeInstance struct {
-	Host string
-	DataNode datanode.Service
-}
-
 type NameNodeMetaData struct {
 	BlockId string
-	BlockAddresses []DataNodeInstance
+	BlockAddresses []utils.DataNodeInstance
 }
 
 type NameNodeReadRequest struct {
@@ -29,7 +24,7 @@ type NameNodeWriteRequest struct {
 type Service struct {
 	BlockSize          uint64
 	ReplicationFactor  uint8
-	IdToDataNodes      map[uint64]DataNodeInstance
+	IdToDataNodes      map[uint64]utils.DataNodeInstance
 	FileNameToBlocks   map[string][]string
 	BlockToDataNodeIds map[string][]uint64
 }
@@ -58,7 +53,7 @@ func (nameNode *Service) ReadData(request *NameNodeReadRequest, reply *[]NameNod
 	fileBlocks := nameNode.FileNameToBlocks[request.FileName]
 
 	for _, block := range fileBlocks {
-		var blockAddresses []DataNodeInstance
+		var blockAddresses []utils.DataNodeInstance
 
 		targetDataNodeIds := nameNode.BlockToDataNodeIds[block]
 		for _, dataNodeId := range targetDataNodeIds {
@@ -86,7 +81,7 @@ func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64)(
 		blockId := uuid.New().String()
 		nameNode.FileNameToBlocks[fileName] = append(nameNode.FileNameToBlocks[fileName], blockId)
 
-		var blockAddresses []DataNodeInstance
+		var blockAddresses []utils.DataNodeInstance
 
 		targetDataNodeIds := selectRandomNumbers(dataNodesAvailable, nameNode.ReplicationFactor)
 		nameNode.BlockToDataNodeIds[blockId] = targetDataNodeIds

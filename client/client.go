@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putStatus bool) {
+func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putStatus bool) {
 	fileSizeHandler, err := os.Stat(sourcePath)
 	utils.Check(err)
 
@@ -33,12 +33,9 @@ func put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 		blockAddresses := metaData.BlockAddresses
 
 		startingDataNode := blockAddresses[0]
-		var remainingDataNodes []datanode.Service
-		for _, instances := range blockAddresses[1:] {
-			remainingDataNodes = append(remainingDataNodes, instances.DataNode)
-		}
+		remainingDataNodes := blockAddresses[1:]
 
-		dataNodeInstance, err := rpc.Dial("tcp", string(startingDataNode.DataNode.ServicePort))
+		dataNodeInstance, err := rpc.Dial("tcp", startingDataNode.ServicePort)
 		utils.Check(err)
 
 		request := datanode.DataNodePutRequest{BlockId: blockId, Data: string(dataStagingBytes), ReplicationNodes: remainingDataNodes}
@@ -50,27 +47,6 @@ func put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 	return
 }
 
-func get(nameNode *rpc.Client, fileName string) {
+func Get(nameNode *rpc.Client, fileName string) {
 
-}
-
-func main() {
-	nameNodeInstance, err := rpc.Dial("tcp", "localhost:1234")
-	utils.Check(err)
-
-	if len(os.Args) < 2 {
-		os.Exit(1)
-	}
-	request := os.Args[1]
-	switch request {
-	case "put":
-		sourcePath := os.Args[2]
-		fileName := os.Args[3]
-		put(nameNodeInstance, sourcePath, fileName)
-	case "get":
-		fileName := os.Args[2]
-		get(nameNodeInstance, fileName)
-	default:
-		os.Exit(1)
-	}
 }
