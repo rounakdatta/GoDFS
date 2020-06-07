@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Creating a DataNode Service
+// Test creating a DataNode Service
 func TestDataNodeServiceCreation(t *testing.T) {
 	testDataNodeService := new(Service)
 	testDataNodeService.DataDirectory = "./"
@@ -19,7 +19,7 @@ func TestDataNodeServiceCreation(t *testing.T) {
 	}
 }
 
-// Write data within DataNode
+// Test writing data within DataNode
 func TestDataNodeServiceWrite(t *testing.T) {
 	testDataNodeService := new(Service)
 	testDataNodeService.DataDirectory = "./"
@@ -34,7 +34,7 @@ func TestDataNodeServiceWrite(t *testing.T) {
 	}
 }
 
-// Read data within DataNode
+// Test reading data within DataNode
 func TestDataNodeServiceRead(t *testing.T) {
 	testDataNodeService := new(Service)
 	testDataNodeService.DataDirectory = "./"

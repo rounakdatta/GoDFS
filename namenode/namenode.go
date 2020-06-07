@@ -23,15 +23,15 @@ type NameNodeWriteRequest struct {
 
 type Service struct {
 	BlockSize          uint64
-	ReplicationFactor  uint8
+	ReplicationFactor  uint64
 	IdToDataNodes      map[uint64]utils.DataNodeInstance
 	FileNameToBlocks   map[string][]string
 	BlockToDataNodeIds map[string][]uint64
 }
 
-func selectRandomNumbers(n uint64, count uint8)(randomNumberSet []uint64) {
+func selectRandomNumbers(n uint64, count uint64)(randomNumberSet []uint64) {
 	numberPresentMap := make(map[uint64]bool)
-	for i := uint8(0); i < count ; {
+	for i := uint64(0); i < count ; {
 		generatedNumber := uint64(rand.Int63n(int64(n)))
 		if _, ok := numberPresentMap[generatedNumber]; !ok {
 			numberPresentMap[generatedNumber] = true
@@ -82,8 +82,14 @@ func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64)(
 		nameNode.FileNameToBlocks[fileName] = append(nameNode.FileNameToBlocks[fileName], blockId)
 
 		var blockAddresses []utils.DataNodeInstance
+		var replicationFactor uint64
+		if nameNode.ReplicationFactor > dataNodesAvailable {
+			replicationFactor = dataNodesAvailable
+		} else {
+			replicationFactor = nameNode.ReplicationFactor
+		}
 
-		targetDataNodeIds := selectRandomNumbers(dataNodesAvailable, nameNode.ReplicationFactor)
+		targetDataNodeIds := selectRandomNumbers(dataNodesAvailable, replicationFactor)
 		nameNode.BlockToDataNodeIds[blockId] = targetDataNodeIds
 		for _, dataNodeId := range targetDataNodeIds {
 			blockAddresses = append(blockAddresses, nameNode.IdToDataNodes[dataNodeId])
