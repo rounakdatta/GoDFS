@@ -1,4 +1,4 @@
-package utils
+package util
 
 type DataNodeInstance struct {
 	Host string

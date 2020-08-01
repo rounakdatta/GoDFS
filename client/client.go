@@ -3,28 +3,28 @@ package client
 import (
 	"../datanode"
 	"../namenode"
-	"../utils"
+	"../util"
 	"net/rpc"
 	"os"
 )
 
 func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putStatus bool) {
 	fileSizeHandler, err := os.Stat(sourcePath)
-	utils.Check(err)
+	util.Check(err)
 
 	fileSize := uint64(fileSizeHandler.Size())
 	request := namenode.NameNodeWriteRequest{FileName: fileName, FileSize: fileSize}
 	var reply []namenode.NameNodeMetaData
 
 	err = nameNodeInstance.Call("Service.WriteData", request, &reply)
-	utils.Check(err)
+	util.Check(err)
 
 	var blockSize uint64
 	err = nameNodeInstance.Call("Service.GetBlockSize", true, blockSize)
-	utils.Check(err)
+	util.Check(err)
 
 	fileHandler, err := os.Open(sourcePath)
-	utils.Check(err)
+	util.Check(err)
 
 	dataStagingBytes := make([]byte, blockSize)
 	for _, metaData := range reply {
@@ -36,12 +36,12 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 		remainingDataNodes := blockAddresses[1:]
 
 		dataNodeInstance, err := rpc.Dial("tcp", startingDataNode.ServicePort)
-		utils.Check(err)
+		util.Check(err)
 
 		request := datanode.DataNodePutRequest{BlockId: blockId, Data: string(dataStagingBytes), ReplicationNodes: remainingDataNodes}
 		var reply datanode.DataNodeWriteStatus
 		err = dataNodeInstance.Call("Service.PutData", request, reply)
-		utils.Check(err)
+		util.Check(err)
 		putStatus = true
 	}
 	return

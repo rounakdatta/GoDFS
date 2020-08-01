@@ -1,3 +1,6 @@
+test:
+	go test -v ./...
+
 install:
 	go build clientServer.go
 	go build datanodeServer.go
