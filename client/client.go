@@ -9,7 +9,8 @@ import (
 )
 
 func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putStatus bool) {
-	fileSizeHandler, err := os.Stat(sourcePath)
+	fullFilePath := sourcePath + fileName
+	fileSizeHandler, err := os.Stat(fullFilePath)
 	util.Check(err)
 
 	fileSize := uint64(fileSizeHandler.Size())
@@ -23,7 +24,7 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 	err = nameNodeInstance.Call("Service.GetBlockSize", true, &blockSize)
 	util.Check(err)
 
-	fileHandler, err := os.Open(sourcePath)
+	fileHandler, err := os.Open(fullFilePath)
 	util.Check(err)
 
 	dataStagingBytes := make([]byte, blockSize)
@@ -35,13 +36,13 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 		startingDataNode := blockAddresses[0]
 		remainingDataNodes := blockAddresses[1:]
 
-		dataNodeInstance, rpcErr := rpc.Dial("tcp", "127.0.0.1:" + startingDataNode.ServicePort)
+		dataNodeInstance, rpcErr := rpc.Dial("tcp", startingDataNode.Host + ":" + startingDataNode.ServicePort)
 		util.Check(rpcErr)
 		defer dataNodeInstance.Close()
 
 		request := datanode.DataNodePutRequest{
 			BlockId: blockId,
-			Data: "kitty alacritty", // string(dataStagingBytes),
+			Data: string(dataStagingBytes),
 			ReplicationNodes: remainingDataNodes,
 		}
 		var reply datanode.DataNodeWriteStatus
@@ -53,6 +54,36 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 	return
 }
 
-func Get(nameNode *rpc.Client, fileName string) {
+func Get(nameNodeInstance *rpc.Client, fileName string) (fileContents string, getStatus bool) {
+	request := namenode.NameNodeReadRequest{FileName: fileName}
+	var reply []namenode.NameNodeMetaData
 
+	err := nameNodeInstance.Call("Service.ReadData", request, &reply)
+	util.Check(err)
+
+	fileContents = ""
+
+	for _, metaData := range reply {
+		blockId := metaData.BlockId
+		blockAddresses := metaData.BlockAddresses
+
+		startingDataNode := blockAddresses[0]
+		// remainingDataNodes := blockAddresses[1:]
+
+		dataNodeInstance, rpcErr := rpc.Dial("tcp", startingDataNode.Host + ":" + startingDataNode.ServicePort)
+		util.Check(rpcErr)
+		defer dataNodeInstance.Close()
+
+		request := datanode.DataNodeGetRequest{
+			BlockId: blockId,
+		}
+		var reply datanode.DataNodeData
+
+		rpcErr = dataNodeInstance.Call("Service.GetData", request, &reply)
+		util.Check(rpcErr)
+		fileContents += reply.Data
+	}
+
+	getStatus = true
+	return
 }

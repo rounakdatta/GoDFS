@@ -8,18 +8,18 @@ import (
 	"strconv"
 )
 
-func PutHandler(nameNodeAddress int, sourcePath string, fileName string) {
+func PutHandler(nameNodeAddress int, sourcePath string, fileName string) bool {
 	rpcClient, err := initializeClientUtil(nameNodeAddress)
 	util.Check(err)
 	defer rpcClient.Close()
-	client.Put(rpcClient, sourcePath, fileName)
+	return client.Put(rpcClient, sourcePath, fileName)
 }
 
-func GetHandler(nameNodeAddress int, fileName string) {
+func GetHandler(nameNodeAddress int, fileName string) (string, bool) {
 	rpcClient, err := initializeClientUtil(nameNodeAddress)
 	util.Check(err)
 	defer rpcClient.Close()
-	client.Get(rpcClient, fileName)
+	return client.Get(rpcClient, fileName)
 }
 
 func initializeClientUtil(nameNodeAddress int) (*rpc.Client, error) {

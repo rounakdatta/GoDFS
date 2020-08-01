@@ -54,14 +54,17 @@ func main() {
 				os.Exit(1)
 			}
 
-			daemon.PutHandler(*clientNameNodePortPtr, configurations[0], configurations[1])
+			status := daemon.PutHandler(*clientNameNodePortPtr, configurations[0], configurations[1])
+			log.Printf("Put status: %t\n", status)
 		} else if *clientOperationPtr == "get" {
 			if len(configurations) != 1 {
 				log.Println("incorrect number of configurations, required: fileName")
 				os.Exit(1)
 			}
 
-			daemon.GetHandler(*clientNameNodePortPtr, configurations[0])
+			contents, status := daemon.GetHandler(*clientNameNodePortPtr, configurations[0])
+			log.Printf("Get status: %t\n", status)
+			log.Println(contents)
 		}
 	}
 }
