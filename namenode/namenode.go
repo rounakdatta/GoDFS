@@ -1,14 +1,14 @@
 package namenode
 
 import (
-	"../util"
 	"github.com/google/uuid"
+	"github.com/rounakdatta/GoDFS/util"
 	"math"
 	"math/rand"
 )
 
 type NameNodeMetaData struct {
-	BlockId string
+	BlockId        string
 	BlockAddresses []util.DataNodeInstance
 }
 
@@ -29,9 +29,9 @@ type Service struct {
 	BlockToDataNodeIds map[string][]uint64
 }
 
-func selectRandomNumbers(n uint64, count uint64)(randomNumberSet []uint64) {
+func selectRandomNumbers(n uint64, count uint64) (randomNumberSet []uint64) {
 	numberPresentMap := make(map[uint64]bool)
-	for i := uint64(0); i < count ; {
+	for i := uint64(0); i < count; {
 		generatedNumber := uint64(rand.Int63n(int64(n)))
 		if _, ok := numberPresentMap[generatedNumber]; !ok {
 			numberPresentMap[generatedNumber] = true
@@ -73,7 +73,7 @@ func (nameNode *Service) WriteData(request *NameNodeWriteRequest, reply *[]NameN
 	return nil
 }
 
-func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64)(metadata []NameNodeMetaData) {
+func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64) (metadata []NameNodeMetaData) {
 	nameNode.FileNameToBlocks[fileName] = []string{}
 	dataNodesAvailable := uint64(len(nameNode.IdToDataNodes))
 

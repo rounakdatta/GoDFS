@@ -1,8 +1,8 @@
 package namenode
 
 import (
+	"github.com/rounakdatta/GoDFS/util"
 	"testing"
-	"../util"
 )
 
 // Test creating a NameNode Service

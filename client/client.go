@@ -1,9 +1,9 @@
 package client
 
 import (
-	"../datanode"
-	"../namenode"
-	"../util"
+	"github.com/rounakdatta/GoDFS/datanode"
+	"github.com/rounakdatta/GoDFS/namenode"
+	"github.com/rounakdatta/GoDFS/util"
 	"net/rpc"
 	"os"
 )

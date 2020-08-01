@@ -1,7 +1,5 @@
 test:
 	go test -v ./...
 
-install:
-	go build clientServer.go
-	go build datanodeServer.go
-	go build namenodeServer.go
+build:
+	go build -o godfs main.go

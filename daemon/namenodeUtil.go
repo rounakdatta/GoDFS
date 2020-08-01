@@ -1,39 +1,44 @@
-package util
+package daemon
 
 import (
 	"github.com/rounakdatta/GoDFS/namenode"
+	"github.com/rounakdatta/GoDFS/util"
+	"log"
 	"net"
 	"net/http"
 	"net/rpc"
+	"strconv"
 )
 
 func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []string) error {
-	nameNodeInstance.IdToDataNodes = make(map[uint64]DataNodeInstance)
+	nameNodeInstance.IdToDataNodes = make(map[uint64]util.DataNodeInstance)
 
 	var i uint64
 	availableNumberOfDataNodes := uint64(len(listOfDataNodes))
 	for i = 0; i < availableNumberOfDataNodes; i++ {
 		host, port, err := net.SplitHostPort(listOfDataNodes[i])
-		Check(err)
-		dataNodeInstance := DataNodeInstance{Host: host, ServicePort: port}
+		util.Check(err)
+		dataNodeInstance := util.DataNodeInstance{Host: host, ServicePort: port}
 		nameNodeInstance.IdToDataNodes[i] = dataNodeInstance
 	}
 
 	return nil
 }
 
-func initializeNameNodeUtil(serverPort string, listOfDataNodes []string) {
+func InitializeNameNodeUtil(serverPort int, listOfDataNodes []string) {
 	nameNodeInstance := new(namenode.Service)
 	err := discoverDataNodes(nameNodeInstance, listOfDataNodes)
-	Check(err)
+	util.Check(err)
 
 	err = rpc.Register(nameNodeInstance)
-	Check(err)
+	util.Check(err)
 
 	rpc.HandleHTTP()
-	listener, err := net.Listen("tcp", ":" + serverPort)
-	Check(err)
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(serverPort))
+	util.Check(err)
 
 	err = http.Serve(listener, nil)
-	Check(err)
+	util.Check(err)
+
+	log.Println("DataNode daemon started on port: " + strconv.Itoa(serverPort))
 }

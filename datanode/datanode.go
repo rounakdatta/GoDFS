@@ -1,8 +1,8 @@
 package datanode
 
 import (
-	"../util"
 	"bufio"
+	"github.com/rounakdatta/GoDFS/util"
 	"io/ioutil"
 	"os"
 )
@@ -13,8 +13,8 @@ type Service struct {
 }
 
 type DataNodePutRequest struct {
-	BlockId string
-	Data string
+	BlockId          string
+	Data             string
 	ReplicationNodes []util.DataNodeInstance
 }
 

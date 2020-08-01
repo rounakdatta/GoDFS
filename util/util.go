@@ -1,7 +1,7 @@
 package util
 
 type DataNodeInstance struct {
-	Host string
+	Host        string
 	ServicePort string
 }
 
