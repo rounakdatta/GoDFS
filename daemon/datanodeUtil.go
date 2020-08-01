@@ -5,7 +5,6 @@ import (
 	"github.com/rounakdatta/GoDFS/util"
 	"log"
 	"net"
-	"net/http"
 	"net/rpc"
 	"strconv"
 )
@@ -24,9 +23,9 @@ func InitializeDataNodeUtil(serverPort int, dataLocation string) {
 	rpc.HandleHTTP()
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(serverPort))
 	util.Check(err)
+	defer listener.Close()
 
-	err = http.Serve(listener, nil)
-	util.Check(err)
+	rpc.Accept(listener)
 
 	log.Println("DataNode daemon started on port: " + strconv.Itoa(serverPort))
 }

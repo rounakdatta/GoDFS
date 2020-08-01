@@ -20,7 +20,7 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 	util.Check(err)
 
 	var blockSize uint64
-	err = nameNodeInstance.Call("Service.GetBlockSize", true, blockSize)
+	err = nameNodeInstance.Call("Service.GetBlockSize", true, &blockSize)
 	util.Check(err)
 
 	fileHandler, err := os.Open(sourcePath)
@@ -35,13 +35,19 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 		startingDataNode := blockAddresses[0]
 		remainingDataNodes := blockAddresses[1:]
 
-		dataNodeInstance, err := rpc.Dial("tcp", startingDataNode.ServicePort)
-		util.Check(err)
+		dataNodeInstance, rpcErr := rpc.Dial("tcp", "127.0.0.1:" + startingDataNode.ServicePort)
+		util.Check(rpcErr)
+		defer dataNodeInstance.Close()
 
-		request := datanode.DataNodePutRequest{BlockId: blockId, Data: string(dataStagingBytes), ReplicationNodes: remainingDataNodes}
+		request := datanode.DataNodePutRequest{
+			BlockId: blockId,
+			Data: "kitty alacritty", // string(dataStagingBytes),
+			ReplicationNodes: remainingDataNodes,
+		}
 		var reply datanode.DataNodeWriteStatus
-		err = dataNodeInstance.Call("Service.PutData", request, reply)
-		util.Check(err)
+
+		rpcErr = dataNodeInstance.Call("Service.PutData", request, &reply)
+		util.Check(rpcErr)
 		putStatus = true
 	}
 	return

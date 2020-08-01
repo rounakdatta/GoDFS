@@ -2,6 +2,7 @@ package namenode
 
 import (
 	"github.com/rounakdatta/GoDFS/util"
+	"log"
 	"testing"
 )
 
@@ -47,6 +48,7 @@ func TestNameNodeServiceWrite(t *testing.T) {
 
 	var replyPayload []NameNodeMetaData
 	err := testNameNodeService.WriteData(&writeDataPayload, &replyPayload)
+	log.Println(replyPayload)
 	util.Check(err)
 	if len(replyPayload) != 3 {
 		t.Errorf("Unable to set metadata correctly; Expected: %d, found: %d.", 3, len(replyPayload))

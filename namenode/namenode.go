@@ -29,6 +29,16 @@ type Service struct {
 	BlockToDataNodeIds map[string][]uint64
 }
 
+func NewService(blockSize uint64, replicationFactor uint64) *Service {
+	return &Service{
+		BlockSize:          blockSize,
+		ReplicationFactor:  replicationFactor,
+		FileNameToBlocks:   make(map[string][]string),
+		IdToDataNodes:      make(map[uint64]util.DataNodeInstance),
+		BlockToDataNodeIds: make(map[string][]uint64),
+	}
+}
+
 func selectRandomNumbers(n uint64, count uint64) (randomNumberSet []uint64) {
 	numberPresentMap := make(map[uint64]bool)
 	for i := uint64(0); i < count; {
