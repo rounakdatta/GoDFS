@@ -26,21 +26,21 @@ make build
 - **DataNode daemon**
 	Syntax:
 	```bash
-	./godfs datanode --port <portNumber> --data-location <dirLocation>
+	./godfs datanode --port <portNumber> --data-location <dataLocation>
 	```
 	Sample command:
 	```bash
-	./godfs datanode --data-location .dndata/ 
+	./godfs datanode --port 7002 --data-location .dndata3/
 	```
 
 - **NameNode daemon**
 	Syntax:
 	```bash
-	./godfs namenode --port <portNumber> --list-datanodes <commaSepUris> <blockSize> <replicationFactor> 
+	./godfs namenode --port <portNumber> --datanodes <dnEndpoints> --block-size <blockSize> --replication-factor <replicationFactor> 
 	```
 	Sample command:
 	```bash
-	./godfs namenode --list-datanodes localhost:7000,localhost:7001 10 1  
+	./godfs namenode --datanodes localhost:7000,localhost:7001,localhost:7002 --block-size 10 --replication-factor 2
 	```
 	
 - **Client**
@@ -48,20 +48,20 @@ Currently Put and Get operations are supported
 	- **Put** operation
 	Syntax:
 		```bash
-		./godfs client --namenode-address <nnPort> --operation put <locationToFile> <fileName>
+		./godfs client --namenode <nnEndpoint> --operation put --source-path <locationToFile> --filename <fileName>
 		```
 		Sample command:
 		```bash
-		./godfs client --namenode-address 9000 --operation put ./ foo.txt
+		./godfs client --namenode localhost:9000 --operation put --source-path ./ --filename foo.bar
 		```
 	- **Get** operation
 	Syntax:
 		```bash
-		./godfs client --namenode-address <nnPort> --operation get <fileName>
+		./godfs client --namenode <nnEndpoint> --operation get --filename <fileName>
 		```
 		Sample command:
 		```bash
-		./godfs client --namenode-address 9000 --operation get foo.txt  
+		./godfs client --namenode localhost:9000 --operation get --filename foo.bar
 		```
 	
 ## Todo
