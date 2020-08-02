@@ -51,7 +51,9 @@ func main() {
 		} else if *clientOperationPtr == "get" {
 			contents, status := daemon.GetHandler(*clientNameNodePortPtr, *clientFilenamePtr)
 			log.Printf("Get status: %t\n", status)
-			log.Println(contents)
+			if status {
+				log.Println(contents)
+			}
 		}
 	}
 }

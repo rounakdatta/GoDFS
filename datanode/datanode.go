@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"github.com/rounakdatta/GoDFS/util"
 	"io/ioutil"
+	"net/rpc"
 	"os"
 )
 
@@ -31,6 +32,28 @@ type DataNodeData struct {
 }
 
 func (dataNode *Service) forwardForReplication(request *DataNodePutRequest, reply *DataNodeWriteStatus) error {
+	blockId := request.BlockId
+	blockAddresses := request.ReplicationNodes
+
+	if len(blockAddresses) == 0 {
+		return nil
+	}
+
+	startingDataNode := blockAddresses[0]
+	remainingDataNodes := blockAddresses[1:]
+
+	dataNodeInstance, rpcErr := rpc.Dial("tcp", startingDataNode.Host + ":" + startingDataNode.ServicePort)
+	util.Check(rpcErr)
+	defer dataNodeInstance.Close()
+
+	payloadRequest := DataNodePutRequest{
+		BlockId: blockId,
+		Data: request.Data,
+		ReplicationNodes: remainingDataNodes,
+	}
+
+	rpcErr = dataNodeInstance.Call("Service.PutData", payloadRequest, &reply)
+	util.Check(rpcErr)
 	return nil
 }
 

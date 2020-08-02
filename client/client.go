@@ -69,22 +69,32 @@ func Get(nameNodeInstance *rpc.Client, fileName string) (fileContents string, ge
 	for _, metaData := range reply {
 		blockId := metaData.BlockId
 		blockAddresses := metaData.BlockAddresses
+		blockFetchStatus := false
 
-		startingDataNode := blockAddresses[0]
-		// remainingDataNodes := blockAddresses[1:]
+		for _, selectedDataNode := range blockAddresses {
+			dataNodeInstance, rpcErr := rpc.Dial("tcp", selectedDataNode.Host + ":" + selectedDataNode.ServicePort)
+			if rpcErr != nil {
+				continue
+			}
 
-		dataNodeInstance, rpcErr := rpc.Dial("tcp", startingDataNode.Host + ":" + startingDataNode.ServicePort)
-		util.Check(rpcErr)
-		defer dataNodeInstance.Close()
+			defer dataNodeInstance.Close()
 
-		request := datanode.DataNodeGetRequest{
-			BlockId: blockId,
+			request := datanode.DataNodeGetRequest{
+				BlockId: blockId,
+			}
+			var reply datanode.DataNodeData
+
+			rpcErr = dataNodeInstance.Call("Service.GetData", request, &reply)
+			util.Check(rpcErr)
+			fileContents += reply.Data
+			blockFetchStatus = true
+			break
 		}
-		var reply datanode.DataNodeData
 
-		rpcErr = dataNodeInstance.Call("Service.GetData", request, &reply)
-		util.Check(rpcErr)
-		fileContents += reply.Data
+		if !blockFetchStatus {
+			getStatus = false
+			return
+		}
 	}
 
 	getStatus = true
