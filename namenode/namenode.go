@@ -78,7 +78,7 @@ func (nameNode *Service) ReadData(request *NameNodeReadRequest, reply *[]NameNod
 func (nameNode *Service) WriteData(request *NameNodeWriteRequest, reply *[]NameNodeMetaData) error {
 	nameNode.FileNameToBlocks[request.FileName] = []string{}
 
-	numberOfBlocksToAllocate := uint64(math.Ceil(float64(request.FileSize / nameNode.BlockSize)))
+	numberOfBlocksToAllocate := uint64(math.Ceil(float64(request.FileSize) / float64(nameNode.BlockSize)))
 	*reply = nameNode.allocateBlocks(request.FileName, numberOfBlocksToAllocate)
 	return nil
 }

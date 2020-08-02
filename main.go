@@ -17,10 +17,14 @@ func main() {
 	dataNodeDataLocationPtr := dataNodeCommand.String("data-location", ".", "DataNode data storage location")
 
 	nameNodePortPtr := nameNodeCommand.Int("port", 9000, "NameNode communication port")
-	nameNodeListPtr := nameNodeCommand.String("list-datanodes", "", "Comma-separated list of DataNodes to connect to")
+	nameNodeListPtr := nameNodeCommand.String("datanodes", "", "Comma-separated list of DataNodes to connect to")
+	nameNodeBlockSizePtr := nameNodeCommand.Int("block-size", 32, "Block size to store")
+	nameNodeReplicationFactorPtr := nameNodeCommand.Int("replication-factor", 1, "Replication factor of the system")
 
-	clientNameNodePortPtr := clientCommand.Int("namenode-address", 9000, "NameNode communication port")
+	clientNameNodePortPtr := clientCommand.String("namenode", "localhost:9000", "NameNode communication port")
 	clientOperationPtr := clientCommand.String("operation", "", "Operation to perform")
+	clientSourcePathPtr := clientCommand.String("source-path", "", "Source path of the file")
+	clientFilenamePtr := clientCommand.String("filename", "", "File name")
 
 	if len(os.Args) < 2 {
 		log.Println("sub-command is required")
@@ -34,35 +38,18 @@ func main() {
 
 	case "namenode":
 		_ = nameNodeCommand.Parse(os.Args[2:])
-		configurations := nameNodeCommand.Args()
-
-		if len(configurations) != 2 {
-			log.Println("incorrect number of configurations, required: blockSize, replicationFactor")
-			os.Exit(1)
-		}
-
 		listOfDataNodes := strings.Split(*nameNodeListPtr, ",")
-		daemon.InitializeNameNodeUtil(*nameNodePortPtr, configurations[0], configurations[1], listOfDataNodes)
+		daemon.InitializeNameNodeUtil(*nameNodePortPtr, *nameNodeBlockSizePtr, *nameNodeReplicationFactorPtr, listOfDataNodes)
 
 	case "client":
 		_ = clientCommand.Parse(os.Args[2:])
-		configurations := clientCommand.Args()
 
 		if *clientOperationPtr == "put" {
-			if len(configurations) != 2 {
-				log.Println("incorrect number of configurations, required: sourcePath, fileName")
-				os.Exit(1)
-			}
-
-			status := daemon.PutHandler(*clientNameNodePortPtr, configurations[0], configurations[1])
+			status := daemon.PutHandler(*clientNameNodePortPtr, *clientSourcePathPtr, *clientFilenamePtr)
 			log.Printf("Put status: %t\n", status)
-		} else if *clientOperationPtr == "get" {
-			if len(configurations) != 1 {
-				log.Println("incorrect number of configurations, required: fileName")
-				os.Exit(1)
-			}
 
-			contents, status := daemon.GetHandler(*clientNameNodePortPtr, configurations[0])
+		} else if *clientOperationPtr == "get" {
+			contents, status := daemon.GetHandler(*clientNameNodePortPtr, *clientFilenamePtr)
 			log.Printf("Get status: %t\n", status)
 			log.Println(contents)
 		}

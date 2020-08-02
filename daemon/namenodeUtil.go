@@ -24,18 +24,13 @@ func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []str
 	return nil
 }
 
-func InitializeNameNodeUtil(serverPort int, blockSize string, replicationFactor string, listOfDataNodes []string) {
-	blockSizeNum, err := strconv.Atoi(blockSize)
-	util.Check(err)
-	replicationFactorNum, err := strconv.Atoi(replicationFactor)
-	util.Check(err)
-
-	nameNodeInstance := namenode.NewService(uint64(blockSizeNum), uint64(replicationFactorNum))
-	err = discoverDataNodes(nameNodeInstance, listOfDataNodes)
+func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int, listOfDataNodes []string) {
+	nameNodeInstance := namenode.NewService(uint64(blockSize), uint64(replicationFactor))
+	err := discoverDataNodes(nameNodeInstance, listOfDataNodes)
 	util.Check(err)
 
-	log.Printf("BlockSize is %d\n", blockSizeNum)
-	log.Printf("Replication Factor is %d\n", replicationFactorNum)
+	log.Printf("BlockSize is %d\n", blockSize)
+	log.Printf("Replication Factor is %d\n", replicationFactor)
 	log.Printf("List of DataNode(s) in service is %q\n", listOfDataNodes)
 	log.Printf("NameNode port is %d\n", serverPort)
 

@@ -29,7 +29,10 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 
 	dataStagingBytes := make([]byte, blockSize)
 	for _, metaData := range reply {
-		fileHandler.Read(dataStagingBytes)
+		n, err := fileHandler.Read(dataStagingBytes)
+		util.Check(err)
+		dataStagingBytes = dataStagingBytes[:n]
+
 		blockId := metaData.BlockId
 		blockAddresses := metaData.BlockAddresses
 
