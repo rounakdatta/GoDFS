@@ -63,6 +63,22 @@ Currently Put and Get operations are supported
 		```bash
 		./godfs client --namenode localhost:9000 --operation get --filename foo.bar
 		```
+
+### Using Docker Compose
+- Build the images for the components:
+    ```bash
+     docker build -t datanode -f daemon/datanode/Dockerfile .
+     docker build -t namenode -f daemon/namenode/Dockerfile .
+     docker build -t client -f daemon/client/Dockerfile .
+    ```
+- Initiate the services:
+    ```bash
+    docker-compose up --scale datanode_app=4
+    ```
+- Start the container to run the client:
+    ```bash
+    docker run -it --network godfs_data-whisper client 
+    ```
 	
 ## Todo
 - [ ] DataNodes send heartbeat to NameNode

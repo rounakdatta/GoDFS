@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
-	"github.com/rounakdatta/GoDFS/daemon"
+	"github.com/rounakdatta/GoDFS/daemon/client"
+	"github.com/rounakdatta/GoDFS/daemon/datanode"
+	"github.com/rounakdatta/GoDFS/daemon/namenode"
 	"log"
 	"os"
 	"strings"
@@ -34,22 +36,22 @@ func main() {
 	switch os.Args[1] {
 	case "datanode":
 		_ = dataNodeCommand.Parse(os.Args[2:])
-		daemon.InitializeDataNodeUtil(*dataNodePortPtr, *dataNodeDataLocationPtr)
+		datanode.InitializeDataNodeUtil(*dataNodePortPtr, *dataNodeDataLocationPtr)
 
 	case "namenode":
 		_ = nameNodeCommand.Parse(os.Args[2:])
 		listOfDataNodes := strings.Split(*nameNodeListPtr, ",")
-		daemon.InitializeNameNodeUtil(*nameNodePortPtr, *nameNodeBlockSizePtr, *nameNodeReplicationFactorPtr, listOfDataNodes)
+		namenode.InitializeNameNodeUtil(*nameNodePortPtr, *nameNodeBlockSizePtr, *nameNodeReplicationFactorPtr, listOfDataNodes)
 
 	case "client":
 		_ = clientCommand.Parse(os.Args[2:])
 
 		if *clientOperationPtr == "put" {
-			status := daemon.PutHandler(*clientNameNodePortPtr, *clientSourcePathPtr, *clientFilenamePtr)
+			status := client.PutHandler(*clientNameNodePortPtr, *clientSourcePathPtr, *clientFilenamePtr)
 			log.Printf("Put status: %t\n", status)
 
 		} else if *clientOperationPtr == "get" {
-			contents, status := daemon.GetHandler(*clientNameNodePortPtr, *clientFilenamePtr)
+			contents, status := client.GetHandler(*clientNameNodePortPtr, *clientFilenamePtr)
 			log.Printf("Get status: %t\n", status)
 			if status {
 				log.Println(contents)

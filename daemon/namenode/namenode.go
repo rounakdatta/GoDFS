@@ -1,12 +1,13 @@
-package daemon
+package namenode
 
 import (
-	"github.com/rounakdatta/GoDFS/namenode"
-	"github.com/rounakdatta/GoDFS/util"
 	"log"
 	"net"
 	"net/rpc"
 	"strconv"
+
+	"github.com/rounakdatta/GoDFS/namenode"
+	"github.com/rounakdatta/GoDFS/util"
 )
 
 func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []string) error {
@@ -38,7 +39,7 @@ func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int
 	util.Check(err)
 
 	rpc.HandleHTTP()
-	listener, err := net.Listen("tcp", ":" + strconv.Itoa(serverPort))
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(serverPort))
 	util.Check(err)
 	defer listener.Close()
 

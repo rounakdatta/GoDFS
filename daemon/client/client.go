@@ -1,11 +1,12 @@
-package daemon
+package client
 
 import (
-	"github.com/rounakdatta/GoDFS/client"
-	"github.com/rounakdatta/GoDFS/util"
 	"log"
 	"net"
 	"net/rpc"
+
+	"github.com/rounakdatta/GoDFS/client"
+	"github.com/rounakdatta/GoDFS/util"
 )
 
 func PutHandler(nameNodeAddress string, sourcePath string, fileName string) bool {
@@ -27,5 +28,5 @@ func initializeClientUtil(nameNodeAddress string) (*rpc.Client, error) {
 	util.Check(err)
 
 	log.Printf("NameNode to connect to is %s\n", nameNodeAddress)
-	return rpc.Dial("tcp", host + ":" + port)
+	return rpc.Dial("tcp", host+":"+port)
 }

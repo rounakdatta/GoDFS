@@ -1,12 +1,13 @@
-package daemon
+package datanode
 
 import (
-	"github.com/rounakdatta/GoDFS/datanode"
-	"github.com/rounakdatta/GoDFS/util"
 	"log"
 	"net"
 	"net/rpc"
 	"strconv"
+
+	"github.com/rounakdatta/GoDFS/datanode"
+	"github.com/rounakdatta/GoDFS/util"
 )
 
 func InitializeDataNodeUtil(serverPort int, dataLocation string) {
