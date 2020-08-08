@@ -42,13 +42,13 @@ func (dataNode *Service) forwardForReplication(request *DataNodePutRequest, repl
 	startingDataNode := blockAddresses[0]
 	remainingDataNodes := blockAddresses[1:]
 
-	dataNodeInstance, rpcErr := rpc.Dial("tcp", startingDataNode.Host + ":" + startingDataNode.ServicePort)
+	dataNodeInstance, rpcErr := rpc.Dial("tcp", startingDataNode.Host+":"+startingDataNode.ServicePort)
 	util.Check(rpcErr)
 	defer dataNodeInstance.Close()
 
 	payloadRequest := DataNodePutRequest{
-		BlockId: blockId,
-		Data: request.Data,
+		BlockId:          blockId,
+		Data:             request.Data,
 		ReplicationNodes: remainingDataNodes,
 	}
 

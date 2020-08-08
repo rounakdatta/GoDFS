@@ -23,6 +23,8 @@ The CLI can be compiled to a binary to obtain `godfs` as:
 make build
 ```
 
+### Natively
+
 - **DataNode daemon**
 	Syntax:
 	```bash
@@ -64,21 +66,22 @@ Currently Put and Get operations are supported
 		./godfs client --namenode localhost:9000 --operation get --filename foo.bar
 		```
 
-### Using Docker Compose
+### Containerized through Docker Compose
 - Build the images for the components:
     ```bash
      docker build -t datanode -f daemon/datanode/Dockerfile .
      docker build -t namenode -f daemon/namenode/Dockerfile .
      docker build -t client -f daemon/client/Dockerfile .
     ```
-- Initiate the services:
+- Initiate the DataNode and the NameNode services (scale up accordingly):
     ```bash
-    docker-compose up --scale datanode_app=4
+    docker-compose up --scale datanode=6 --remove-orphans --force-recreate
     ```
-- Start the container to run the client:
+- Start the client in a new container under the base host:
     ```bash
-    docker run -it --network godfs_data-whisper client 
+    docker run -it --network host client
     ```
+ - Make file `put` and `get` requests using similar commands as above
 	
 ## Todo
 - [ ] DataNodes send heartbeat to NameNode

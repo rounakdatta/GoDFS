@@ -1,6 +1,7 @@
 package datanode
 
 import (
+	"errors"
 	"log"
 	"net"
 	"net/rpc"
@@ -22,8 +23,14 @@ func InitializeDataNodeUtil(serverPort int, dataLocation string) {
 	util.Check(err)
 
 	rpc.HandleHTTP()
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(serverPort))
-	util.Check(err)
+
+	var listener net.Listener
+	initErr := errors.New("init")
+
+	for initErr != nil {
+		listener, initErr = net.Listen("tcp", ":" + strconv.Itoa(serverPort))
+		serverPort += 1
+	}
 	defer listener.Close()
 
 	rpc.Accept(listener)

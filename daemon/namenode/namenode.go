@@ -1,6 +1,7 @@
 package namenode
 
 import (
+	"errors"
 	"log"
 	"net"
 	"net/rpc"
@@ -13,13 +14,32 @@ import (
 func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []string) error {
 	nameNodeInstance.IdToDataNodes = make(map[uint64]util.DataNodeInstance)
 
-	var i uint64
-	availableNumberOfDataNodes := uint64(len(listOfDataNodes))
+	var i int
+	availableNumberOfDataNodes := len(listOfDataNodes)
+	if availableNumberOfDataNodes == 0 {
+		log.Printf("No DataNodes specified, discovering ...\n")
+
+		initErr := errors.New("init")
+		host := "localhost"
+		serverPort := 7000
+
+		for serverPort < 7050 {
+			dataNodeUri := host + ":" + strconv.Itoa(serverPort)
+			_, initErr = rpc.Dial("tcp", dataNodeUri)
+			if initErr == nil {
+				listOfDataNodes = append(listOfDataNodes, dataNodeUri)
+				log.Printf("Discovered DataNode %s\n", dataNodeUri)
+			}
+			serverPort += 1
+		}
+	}
+
+	availableNumberOfDataNodes = len(listOfDataNodes)
 	for i = 0; i < availableNumberOfDataNodes; i++ {
 		host, port, err := net.SplitHostPort(listOfDataNodes[i])
 		util.Check(err)
 		dataNodeInstance := util.DataNodeInstance{Host: host, ServicePort: port}
-		nameNodeInstance.IdToDataNodes[i] = dataNodeInstance
+		nameNodeInstance.IdToDataNodes[uint64(i)] = dataNodeInstance
 	}
 
 	return nil

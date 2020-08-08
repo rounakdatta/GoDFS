@@ -1,15 +1,11 @@
 version: '3.7'
 services:
-  datanode_app:
+  datanode:
     image: datanode
-    ports:
-      - 7001-7004:7000
-    networks:
-      - data-whisper
-  namenode_app:
-    image: namenode
-    networks:
-      - data-whisper
+    network_mode: host
 
-networks:
-  data-whisper:
+  namenode:
+    image: namenode
+    depends_on:
+      - datanode
+    network_mode: host

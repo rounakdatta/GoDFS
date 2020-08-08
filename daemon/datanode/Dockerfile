@@ -5,6 +5,5 @@ WORKDIR /app
 
 RUN mkdir -p .dndata
 RUN make build
-EXPOSE 7000
 
-CMD ["./godfs", "datanode", "--port", "7000", "--data-location", ".dndata/"]
+CMD ["./godfs", "datanode", "--data-location", ".dndata/"]

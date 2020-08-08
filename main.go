@@ -40,7 +40,12 @@ func main() {
 
 	case "namenode":
 		_ = nameNodeCommand.Parse(os.Args[2:])
-		listOfDataNodes := strings.Split(*nameNodeListPtr, ",")
+		var listOfDataNodes []string
+		if len(*nameNodeListPtr) > 1 {
+			listOfDataNodes = strings.Split(*nameNodeListPtr, ",")
+		} else {
+			listOfDataNodes = []string{}
+		}
 		namenode.InitializeNameNodeUtil(*nameNodePortPtr, *nameNodeBlockSizePtr, *nameNodeReplicationFactorPtr, listOfDataNodes)
 
 	case "client":

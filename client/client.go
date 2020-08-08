@@ -39,13 +39,13 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 		startingDataNode := blockAddresses[0]
 		remainingDataNodes := blockAddresses[1:]
 
-		dataNodeInstance, rpcErr := rpc.Dial("tcp", startingDataNode.Host + ":" + startingDataNode.ServicePort)
+		dataNodeInstance, rpcErr := rpc.Dial("tcp", startingDataNode.Host+":"+startingDataNode.ServicePort)
 		util.Check(rpcErr)
 		defer dataNodeInstance.Close()
 
 		request := datanode.DataNodePutRequest{
-			BlockId: blockId,
-			Data: string(dataStagingBytes),
+			BlockId:          blockId,
+			Data:             string(dataStagingBytes),
 			ReplicationNodes: remainingDataNodes,
 		}
 		var reply datanode.DataNodeWriteStatus
@@ -72,7 +72,7 @@ func Get(nameNodeInstance *rpc.Client, fileName string) (fileContents string, ge
 		blockFetchStatus := false
 
 		for _, selectedDataNode := range blockAddresses {
-			dataNodeInstance, rpcErr := rpc.Dial("tcp", selectedDataNode.Host + ":" + selectedDataNode.ServicePort)
+			dataNodeInstance, rpcErr := rpc.Dial("tcp", selectedDataNode.Host+":"+selectedDataNode.ServicePort)
 			if rpcErr != nil {
 				continue
 			}
