@@ -28,7 +28,7 @@ func InitializeDataNodeUtil(serverPort int, dataLocation string) {
 	initErr := errors.New("init")
 
 	for initErr != nil {
-		listener, initErr = net.Listen("tcp", ":" + strconv.Itoa(serverPort))
+		listener, initErr = net.Listen("tcp", ":"+strconv.Itoa(serverPort))
 		serverPort += 1
 	}
 	defer listener.Close()

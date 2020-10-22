@@ -28,5 +28,5 @@ func initializeClientUtil(nameNodeAddress string) (*rpc.Client, error) {
 	util.Check(err)
 
 	log.Printf("NameNode to connect to is %s\n", nameNodeAddress)
-	return rpc.Dial("tcp", host + ":" + port)
+	return rpc.Dial("tcp", host+":"+port)
 }
