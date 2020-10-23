@@ -22,6 +22,7 @@ type NameNodeWriteRequest struct {
 }
 
 type Service struct {
+	Port uint16
 	BlockSize          uint64
 	ReplicationFactor  uint64
 	IdToDataNodes      map[uint64]util.DataNodeInstance
@@ -29,8 +30,9 @@ type Service struct {
 	BlockToDataNodeIds map[string][]uint64
 }
 
-func NewService(blockSize uint64, replicationFactor uint64) *Service {
+func NewService(blockSize uint64, replicationFactor uint64, serverPort uint16) *Service {
 	return &Service{
+		Port: serverPort,
 		BlockSize:          blockSize,
 		ReplicationFactor:  replicationFactor,
 		FileNameToBlocks:   make(map[string][]string),
@@ -56,6 +58,10 @@ func (nameNode *Service) GetBlockSize(request bool, reply *uint64) error {
 	if request {
 		*reply = nameNode.BlockSize
 	}
+	return nil
+}
+
+func (nameNode *Service) HeartbeatToNameNode() error {
 	return nil
 }
 

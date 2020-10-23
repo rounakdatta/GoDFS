@@ -1,13 +1,13 @@
 package namenode
 
 import (
-	"errors"
 	"log"
 	"net"
 	"net/rpc"
 	"strconv"
 
 	"github.com/rounakdatta/GoDFS/namenode"
+	"github.com/rounakdatta/GoDFS/datanode"
 	"github.com/rounakdatta/GoDFS/util"
 )
 
@@ -19,18 +19,29 @@ func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []str
 	if availableNumberOfDataNodes == 0 {
 		log.Printf("No DataNodes specified, discovering ...\n")
 
-		initErr := errors.New("init")
 		host := "localhost"
 		serverPort := 7000
 
+		pingRequest := datanode.NameNodePingRequest{Host: host, Port: nameNodeInstance.Port}
+		var pingResponse datanode.NameNodePingResponse
+
 		for serverPort < 7050 {
 			dataNodeUri := host + ":" + strconv.Itoa(serverPort)
-			_, initErr = rpc.Dial("tcp", dataNodeUri)
+			dataNodeInstance, initErr := rpc.Dial("tcp", dataNodeUri)
 			if initErr == nil {
 				listOfDataNodes = append(listOfDataNodes, dataNodeUri)
 				log.Printf("Discovered DataNode %s\n", dataNodeUri)
+
+				pingErr := dataNodeInstance.Call("Service.PingToDataNode", pingRequest, pingResponse)
+				util.Check(pingErr)
+				if pingResponse.Ack {
+					log.Printf("Ack recevied from %s\n", dataNodeUri)
+				} else {
+					log.Printf("No ack recevied from %s\n", dataNodeUri)
+				}
+
+				serverPort += 1
 			}
-			serverPort += 1
 		}
 	}
 
@@ -46,7 +57,7 @@ func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []str
 }
 
 func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int, listOfDataNodes []string) {
-	nameNodeInstance := namenode.NewService(uint64(blockSize), uint64(replicationFactor))
+	nameNodeInstance := namenode.NewService(uint64(blockSize), uint64(replicationFactor), uint16(serverPort))
 	err := discoverDataNodes(nameNodeInstance, listOfDataNodes)
 	util.Check(err)
 
@@ -65,5 +76,5 @@ func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int
 
 	rpc.Accept(listener)
 
-	log.Println("DataNode daemon started on port: " + strconv.Itoa(serverPort))
+	log.Println("NameNode daemon started on port: " + strconv.Itoa(serverPort))
 }

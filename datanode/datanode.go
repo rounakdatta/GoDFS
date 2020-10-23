@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"github.com/rounakdatta/GoDFS/util"
 	"io/ioutil"
+	"log"
 	"net/rpc"
 	"os"
 )
@@ -11,6 +12,8 @@ import (
 type Service struct {
 	DataDirectory string
 	ServicePort   uint16
+	NameNodeHost string
+	NameNodePort uint16
 }
 
 type DataNodePutRequest struct {
@@ -29,6 +32,24 @@ type DataNodeWriteStatus struct {
 
 type DataNodeData struct {
 	Data string
+}
+
+type NameNodePingRequest struct {
+	Host string
+	Port uint16
+}
+
+type NameNodePingResponse struct {
+	Ack bool
+}
+
+func (dataNode *Service) PingToDataNode(request *NameNodePingRequest, reply *NameNodePingResponse) error {
+	dataNode.NameNodeHost = request.Host
+	dataNode.NameNodePort = request.Port
+	log.Printf("Received ping from NameNode, recorded as {NameNodeHost: %s, NameNodePort: %d}\n", dataNode.NameNodeHost, dataNode.NameNodePort)
+
+	*reply = NameNodePingResponse{Ack: true}
+	return nil
 }
 
 func (dataNode *Service) forwardForReplication(request *DataNodePutRequest, reply *DataNodeWriteStatus) error {
