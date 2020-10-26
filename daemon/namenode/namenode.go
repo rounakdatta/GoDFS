@@ -5,17 +5,18 @@ import (
 	"net"
 	"net/rpc"
 	"strconv"
+	"time"
 
-	"github.com/rounakdatta/GoDFS/namenode"
 	"github.com/rounakdatta/GoDFS/datanode"
+	"github.com/rounakdatta/GoDFS/namenode"
 	"github.com/rounakdatta/GoDFS/util"
 )
 
-func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []string) error {
+func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes *[]string) error {
 	nameNodeInstance.IdToDataNodes = make(map[uint64]util.DataNodeInstance)
 
 	var i int
-	availableNumberOfDataNodes := len(listOfDataNodes)
+	availableNumberOfDataNodes := len(*listOfDataNodes)
 	if availableNumberOfDataNodes == 0 {
 		log.Printf("No DataNodes specified, discovering ...\n")
 
@@ -29,25 +30,25 @@ func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []str
 			dataNodeUri := host + ":" + strconv.Itoa(serverPort)
 			dataNodeInstance, initErr := rpc.Dial("tcp", dataNodeUri)
 			if initErr == nil {
-				listOfDataNodes = append(listOfDataNodes, dataNodeUri)
+				*listOfDataNodes = append(*listOfDataNodes, dataNodeUri)
 				log.Printf("Discovered DataNode %s\n", dataNodeUri)
 
-				pingErr := dataNodeInstance.Call("Service.PingToDataNode", pingRequest, &pingResponse)
+				pingErr := dataNodeInstance.Call("Service.Ping", pingRequest, &pingResponse)
 				util.Check(pingErr)
 				if pingResponse.Ack {
 					log.Printf("Ack received from %s\n", dataNodeUri)
 				} else {
 					log.Printf("No ack received from %s\n", dataNodeUri)
 				}
-
-				serverPort += 1
 			}
+			serverPort += 1
 		}
+
 	}
 
-	availableNumberOfDataNodes = len(listOfDataNodes)
+	availableNumberOfDataNodes = len(*listOfDataNodes)
 	for i = 0; i < availableNumberOfDataNodes; i++ {
-		host, port, err := net.SplitHostPort(listOfDataNodes[i])
+		host, port, err := net.SplitHostPort((*listOfDataNodes)[i])
 		util.Check(err)
 		dataNodeInstance := util.DataNodeInstance{Host: host, ServicePort: port}
 		nameNodeInstance.IdToDataNodes[uint64(i)] = dataNodeInstance
@@ -58,13 +59,15 @@ func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []str
 
 func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int, listOfDataNodes []string) {
 	nameNodeInstance := namenode.NewService(uint64(blockSize), uint64(replicationFactor), uint16(serverPort))
-	err := discoverDataNodes(nameNodeInstance, listOfDataNodes)
+	err := discoverDataNodes(nameNodeInstance, &listOfDataNodes)
 	util.Check(err)
 
 	log.Printf("BlockSize is %d\n", blockSize)
 	log.Printf("Replication Factor is %d\n", replicationFactor)
 	log.Printf("List of DataNode(s) in service is %q\n", listOfDataNodes)
 	log.Printf("NameNode port is %d\n", serverPort)
+
+	go heartbeatToDataNodes(listOfDataNodes)
 
 	err = rpc.Register(nameNodeInstance)
 	util.Check(err)
@@ -77,4 +80,23 @@ func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int
 	rpc.Accept(listener)
 
 	log.Println("NameNode daemon started on port: " + strconv.Itoa(serverPort))
+}
+
+func heartbeatToDataNodes(listOfDataNodes []string) {
+	for range time.Tick(time.Second * 5) {
+		for _, hostPort := range listOfDataNodes {
+			nameNodeClient, connectionErr := rpc.Dial("tcp", hostPort)
+
+			if connectionErr != nil {
+				log.Printf("Unable to connect to node %s\n", hostPort)
+				continue
+			}
+
+			var response bool
+			hbErr := nameNodeClient.Call("Service.Heartbeat", true, &response)
+			if hbErr != nil || !response {
+				log.Printf("No heartbeat received from %s\n", hostPort)
+			}
+		}
+	}
 }

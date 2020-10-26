@@ -1,10 +1,8 @@
 package namenode
 
 import (
-	"errors"
 	"github.com/google/uuid"
 	"github.com/rounakdatta/GoDFS/util"
-	"log"
 	"math"
 	"math/rand"
 )
@@ -24,7 +22,7 @@ type NameNodeWriteRequest struct {
 }
 
 type Service struct {
-	Port uint16
+	Port               uint16
 	BlockSize          uint64
 	ReplicationFactor  uint64
 	IdToDataNodes      map[uint64]util.DataNodeInstance
@@ -34,7 +32,7 @@ type Service struct {
 
 func NewService(blockSize uint64, replicationFactor uint64, serverPort uint16) *Service {
 	return &Service{
-		Port: serverPort,
+		Port:               serverPort,
 		BlockSize:          blockSize,
 		ReplicationFactor:  replicationFactor,
 		FileNameToBlocks:   make(map[string][]string),
@@ -61,15 +59,6 @@ func (nameNode *Service) GetBlockSize(request bool, reply *uint64) error {
 		*reply = nameNode.BlockSize
 	}
 	return nil
-}
-
-func (nameNode *Service) HeartbeatToNameNode(request bool, response *bool) error {
-	if request {
-		*response = true
-		log.Printf("Received Heartbeat from DataNode\n")
-		return nil
-	}
-	return errors.New("HeartBeatError")
 }
 
 func (nameNode *Service) ReadData(request *NameNodeReadRequest, reply *[]NameNodeMetaData) error {
