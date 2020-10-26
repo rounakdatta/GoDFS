@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"strconv"
+	"time"
 )
 
 type Service struct {
@@ -47,6 +49,8 @@ func (dataNode *Service) PingToDataNode(request *NameNodePingRequest, reply *Nam
 	dataNode.NameNodeHost = request.Host
 	dataNode.NameNodePort = request.Port
 	log.Printf("Received ping from NameNode, recorded as {NameNodeHost: %s, NameNodePort: %d}\n", dataNode.NameNodeHost, dataNode.NameNodePort)
+
+	// go dataNode.initiateHeartbeat()
 
 	*reply = NameNodePingResponse{Ack: true}
 	return nil
@@ -98,4 +102,25 @@ func (dataNode *Service) GetData(request *DataNodeGetRequest, reply *DataNodeDat
 
 	*reply = DataNodeData{Data: string(dataBytes)}
 	return nil
+}
+
+func (dataNode *Service) initiateHeartbeat() {
+	go dataNode.heartbeat()
+	time.Sleep(time.Minute * 10)
+}
+
+func (dataNode *Service) heartbeat() {
+	var nameNodeClient *rpc.Client
+	var err error
+	for {
+		nameNodeClient, err = rpc.Dial("tcp", dataNode.NameNodeHost+":"+strconv.Itoa(int(dataNode.NameNodePort)))
+		if err == nil {
+			break
+		}
+	}
+
+	for range time.Tick(time.Second * 5) {
+		var response bool
+		_ = nameNodeClient.Call("Service.HeartbeatToNameNode", true, &response)
+	}
 }

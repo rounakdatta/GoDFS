@@ -2,13 +2,12 @@ package datanode
 
 import (
 	"errors"
+	"github.com/rounakdatta/GoDFS/datanode"
+	"github.com/rounakdatta/GoDFS/util"
 	"log"
 	"net"
 	"net/rpc"
 	"strconv"
-
-	"github.com/rounakdatta/GoDFS/datanode"
-	"github.com/rounakdatta/GoDFS/util"
 )
 
 func InitializeDataNodeUtil(serverPort int, dataLocation string) {
@@ -37,4 +36,3 @@ func InitializeDataNodeUtil(serverPort int, dataLocation string) {
 
 	log.Println("DataNode daemon started on port: " + strconv.Itoa(serverPort))
 }
-

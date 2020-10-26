@@ -32,12 +32,12 @@ func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes []str
 				listOfDataNodes = append(listOfDataNodes, dataNodeUri)
 				log.Printf("Discovered DataNode %s\n", dataNodeUri)
 
-				pingErr := dataNodeInstance.Call("Service.PingToDataNode", pingRequest, pingResponse)
+				pingErr := dataNodeInstance.Call("Service.PingToDataNode", pingRequest, &pingResponse)
 				util.Check(pingErr)
 				if pingResponse.Ack {
-					log.Printf("Ack recevied from %s\n", dataNodeUri)
+					log.Printf("Ack received from %s\n", dataNodeUri)
 				} else {
-					log.Printf("No ack recevied from %s\n", dataNodeUri)
+					log.Printf("No ack received from %s\n", dataNodeUri)
 				}
 
 				serverPort += 1

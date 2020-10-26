@@ -1,8 +1,10 @@
 package namenode
 
 import (
+	"errors"
 	"github.com/google/uuid"
 	"github.com/rounakdatta/GoDFS/util"
+	"log"
 	"math"
 	"math/rand"
 )
@@ -61,8 +63,13 @@ func (nameNode *Service) GetBlockSize(request bool, reply *uint64) error {
 	return nil
 }
 
-func (nameNode *Service) HeartbeatToNameNode() error {
-	return nil
+func (nameNode *Service) HeartbeatToNameNode(request bool, response *bool) error {
+	if request {
+		*response = true
+		log.Printf("Received Heartbeat from DataNode\n")
+		return nil
+	}
+	return errors.New("HeartBeatError")
 }
 
 func (nameNode *Service) ReadData(request *NameNodeReadRequest, reply *[]NameNodeMetaData) error {
