@@ -67,7 +67,7 @@ func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int
 	log.Printf("List of DataNode(s) in service is %q\n", listOfDataNodes)
 	log.Printf("NameNode port is %d\n", serverPort)
 
-	go heartbeatToDataNodes(listOfDataNodes)
+	go heartbeatToDataNodes(listOfDataNodes, nameNodeInstance)
 
 	err = rpc.Register(nameNodeInstance)
 	util.Check(err)
@@ -82,13 +82,16 @@ func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int
 	log.Println("NameNode daemon started on port: " + strconv.Itoa(serverPort))
 }
 
-func heartbeatToDataNodes(listOfDataNodes []string) {
+func heartbeatToDataNodes(listOfDataNodes []string, nameNode *namenode.Service) {
 	for range time.Tick(time.Second * 5) {
 		for _, hostPort := range listOfDataNodes {
 			nameNodeClient, connectionErr := rpc.Dial("tcp", hostPort)
 
 			if connectionErr != nil {
 				log.Printf("Unable to connect to node %s\n", hostPort)
+				var reply bool
+				reDistributeError := nameNode.ReDistributeData(&namenode.ReDistributeDataRequest{DataNodeUri: hostPort}, &reply)
+				util.Check(reDistributeError)
 				continue
 			}
 
@@ -96,6 +99,9 @@ func heartbeatToDataNodes(listOfDataNodes []string) {
 			hbErr := nameNodeClient.Call("Service.Heartbeat", true, &response)
 			if hbErr != nil || !response {
 				log.Printf("No heartbeat received from %s\n", hostPort)
+				var reply bool
+				reDistributeError := nameNode.ReDistributeData(&namenode.ReDistributeDataRequest{DataNodeUri: hostPort}, &reply)
+				util.Check(reDistributeError)
 			}
 		}
 	}
