@@ -32,7 +32,7 @@ type ReDistributeDataRequest struct {
 }
 
 type UnderReplicatedBlocks struct {
-	BlockId string
+	BlockId           string
 	HealthyDataNodeId uint64
 }
 
@@ -157,11 +157,11 @@ func (nameNode *Service) ReDistributeData(request *ReDistributeDataRequest, repl
 	for blockId, dnIds := range nameNode.BlockToDataNodeIds {
 		for i, dnId := range dnIds {
 			if dnId == deadDataNodeId {
-				healthyDataNodeId := nameNode.BlockToDataNodeIds[blockId][(i + 1) % len(dnIds)]
+				healthyDataNodeId := nameNode.BlockToDataNodeIds[blockId][(i+1)%len(dnIds)]
 				underReplicatedBlocksList = append(
 					underReplicatedBlocksList,
 					UnderReplicatedBlocks{blockId, healthyDataNodeId},
-					)
+				)
 				// TODO: trigger data deletion on the existing data nodes
 				break
 			}
