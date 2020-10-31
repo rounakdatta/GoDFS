@@ -16,7 +16,6 @@ func InitializeDataNodeUtil(serverPort int, dataLocation string) {
 	dataNodeInstance.ServicePort = uint16(serverPort)
 
 	log.Printf("Data storage location is %s\n", dataLocation)
-	log.Printf("DataNode port is %d\n", serverPort)
 
 	err := rpc.Register(dataNodeInstance)
 	util.Check(err)
@@ -30,6 +29,7 @@ func InitializeDataNodeUtil(serverPort int, dataLocation string) {
 		listener, initErr = net.Listen("tcp", ":"+strconv.Itoa(serverPort))
 		serverPort += 1
 	}
+	log.Printf("DataNode port is %d\n", serverPort-1)
 	defer listener.Close()
 
 	rpc.Accept(listener)

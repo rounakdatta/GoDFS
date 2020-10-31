@@ -1,7 +1,6 @@
 package namenode
 
 import (
-	"errors"
 	"github.com/google/uuid"
 	"github.com/rounakdatta/GoDFS/datanode"
 	"github.com/rounakdatta/GoDFS/util"
@@ -10,7 +9,6 @@ import (
 	"math/rand"
 	"net/rpc"
 	"strings"
-	"time"
 )
 
 type NameNodeMetaData struct {
@@ -59,7 +57,6 @@ func NewService(blockSize uint64, replicationFactor uint64, serverPort uint16) *
 func selectRandomNumbers(availableItems []uint64, count uint64) (randomNumberSet []uint64) {
 	numberPresentMap := make(map[uint64]bool)
 	for i := uint64(0); i < count; {
-		rand.Seed(time.Now().Unix())
 		chosenItem := availableItems[rand.Intn(len(availableItems))]
 		if _, ok := numberPresentMap[chosenItem]; !ok {
 			numberPresentMap[chosenItem] = true
@@ -162,17 +159,17 @@ func (nameNode *Service) ReDistributeData(request *ReDistributeDataRequest, repl
 					underReplicatedBlocksList,
 					UnderReplicatedBlocks{blockId, healthyDataNodeId},
 				)
+				delete(nameNode.BlockToDataNodeIds, blockId)
 				// TODO: trigger data deletion on the existing data nodes
 				break
 			}
-			delete(nameNode.BlockToDataNodeIds, blockId)
 		}
 	}
 
 	// verify if re-replication would be possible
 	if len(nameNode.IdToDataNodes) < int(nameNode.ReplicationFactor) {
 		log.Println("Replication not possible due to unavailability of sufficient DataNode(s)")
-		return errors.New("ReplicationNotPossible")
+		return nil
 	}
 
 	var availableNodes []uint64
@@ -221,10 +218,10 @@ func (nameNode *Service) ReDistributeData(request *ReDistributeDataRequest, repl
 		}
 		var putReply datanode.DataNodeWriteStatus
 
-		rpcErr = dataNodeInstance.Call("Service.PutData", putRequest, &putReply)
+		rpcErr = targetDataNodeInstance.Call("Service.PutData", putRequest, &putReply)
 		util.Check(rpcErr)
 
-		log.Printf("Block %s replication completed for %v\n", blockToReplicate.BlockId, targetDataNodeIds)
+		log.Printf("Block %s replication completed for %+v\n", blockToReplicate.BlockId, targetDataNodeIds)
 	}
 
 	return nil

@@ -84,5 +84,6 @@ Currently Put and Get operations are supported
  - Make file `put` and `get` requests using similar commands as above
 	
 ## Todo
-- [x] DataNodes send heartbeat to NameNode
+- [x] NameNode's regular HeartBeat check for DataNodes
+- [x] Re-replication in case of dying DataNode
 - [ ] Secondary NameNode

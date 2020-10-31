@@ -12,6 +12,10 @@ import (
 	"github.com/rounakdatta/GoDFS/util"
 )
 
+func removeElementFromSlice(elements []string, index int) []string {
+	return append(elements[:index], elements[index+1:]...)
+}
+
 func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes *[]string) error {
 	nameNodeInstance.IdToDataNodes = make(map[uint64]util.DataNodeInstance)
 
@@ -84,7 +88,7 @@ func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int
 
 func heartbeatToDataNodes(listOfDataNodes []string, nameNode *namenode.Service) {
 	for range time.Tick(time.Second * 5) {
-		for _, hostPort := range listOfDataNodes {
+		for i, hostPort := range listOfDataNodes {
 			nameNodeClient, connectionErr := rpc.Dial("tcp", hostPort)
 
 			if connectionErr != nil {
@@ -92,6 +96,8 @@ func heartbeatToDataNodes(listOfDataNodes []string, nameNode *namenode.Service) 
 				var reply bool
 				reDistributeError := nameNode.ReDistributeData(&namenode.ReDistributeDataRequest{DataNodeUri: hostPort}, &reply)
 				util.Check(reDistributeError)
+				delete(nameNode.IdToDataNodes, uint64(i))
+				listOfDataNodes = removeElementFromSlice(listOfDataNodes, i)
 				continue
 			}
 
@@ -102,6 +108,8 @@ func heartbeatToDataNodes(listOfDataNodes []string, nameNode *namenode.Service) 
 				var reply bool
 				reDistributeError := nameNode.ReDistributeData(&namenode.ReDistributeDataRequest{DataNodeUri: hostPort}, &reply)
 				util.Check(reDistributeError)
+				delete(nameNode.IdToDataNodes, uint64(i))
+				listOfDataNodes = removeElementFromSlice(listOfDataNodes, i)
 			}
 		}
 	}
