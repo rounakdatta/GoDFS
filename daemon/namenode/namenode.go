@@ -1,9 +1,12 @@
 package namenode
 
 import (
+	"bufio"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/rpc"
+	"os"
 	"strconv"
 	"time"
 
@@ -11,6 +14,8 @@ import (
 	"github.com/rounakdatta/GoDFS/namenode"
 	"github.com/rounakdatta/GoDFS/util"
 )
+
+const NameNodeState = "NN.STATE"
 
 func removeElementFromSlice(elements []string, index int) []string {
 	return append(elements[:index], elements[index+1:]...)
@@ -61,7 +66,7 @@ func discoverDataNodes(nameNodeInstance *namenode.Service, listOfDataNodes *[]st
 	return nil
 }
 
-func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int, listOfDataNodes []string) {
+func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int, isPrimary bool, listOfDataNodes []string) {
 	nameNodeInstance := namenode.NewService(uint64(blockSize), uint64(replicationFactor), uint16(serverPort))
 	err := discoverDataNodes(nameNodeInstance, &listOfDataNodes)
 	util.Check(err)
@@ -71,7 +76,14 @@ func InitializeNameNodeUtil(serverPort int, blockSize int, replicationFactor int
 	log.Printf("List of DataNode(s) in service is %q\n", listOfDataNodes)
 	log.Printf("NameNode port is %d\n", serverPort)
 
-	go heartbeatToDataNodes(listOfDataNodes, nameNodeInstance)
+	if isPrimary {
+		log.Printf("Starting processes for primary NameNode\n")
+		go heartbeatToDataNodes(listOfDataNodes, nameNodeInstance)
+		go scheduledFlushToDisk(nameNodeInstance)
+	} else {
+		log.Printf("Starting processes for secondary NameNode\n")
+		go getServiceStateFromPrimary(nameNodeInstance, listOfDataNodes)
+	}
 
 	err = rpc.Register(nameNodeInstance)
 	util.Check(err)
@@ -112,5 +124,55 @@ func heartbeatToDataNodes(listOfDataNodes []string, nameNode *namenode.Service) 
 				listOfDataNodes = removeElementFromSlice(listOfDataNodes, i)
 			}
 		}
+	}
+}
+
+func scheduledFlushToDisk(namenode *namenode.Service) {
+	for range time.Tick(time.Second * 10) {
+		flushServiceStateToDisk(namenode)
+	}
+}
+
+func flushServiceStateToDisk(namenode *namenode.Service) {
+	state, err := SerializeNameNodeImage(namenode)
+	util.Check(err)
+
+	fileWriteHandler, err := os.Create(NameNodeState)
+	util.Check(err)
+
+	fileWriter := bufio.NewWriter(fileWriteHandler)
+	_, err = fileWriter.WriteString(state)
+	util.Check(err)
+	fileWriter.Flush()
+	fileWriteHandler.Close()
+	log.Println("NameNodeService state flushed to disk")
+}
+
+func getServiceStateFromPrimary(namenodeInstance *namenode.Service, listOfDataNodes []string) {
+	primaryNameNodeHost := "localhost"
+	const primaryNameNodePort = "9000"
+
+	for range time.Tick(time.Second * 2) {
+		primaryNameNodeClient, connectionErr := rpc.Dial("tcp", primaryNameNodeHost+":"+primaryNameNodePort)
+
+		if connectionErr != nil {
+			log.Printf("Unable to connect to NameNode on %s, starting recovery\n", primaryNameNodePort)
+			dataBytes, err := ioutil.ReadFile(NameNodeState)
+			util.Check(err)
+
+			namenodeInstance, err = DeserializeNameNodeImage(string(dataBytes))
+			util.Check(err)
+			go heartbeatToDataNodes(listOfDataNodes, namenodeInstance)
+			go flushServiceStateToDisk(namenodeInstance)
+			return
+		}
+
+		var response *namenode.Service
+		stateFetchErr := primaryNameNodeClient.Call("Service.GetState", true, &response)
+		if stateFetchErr != nil {
+			log.Println("Error fetching state from primary NameNode")
+		}
+
+		flushServiceStateToDisk(response)
 	}
 }

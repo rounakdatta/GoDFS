@@ -2,12 +2,13 @@ package main
 
 import (
 	"flag"
-	"github.com/rounakdatta/GoDFS/daemon/client"
-	"github.com/rounakdatta/GoDFS/daemon/datanode"
-	"github.com/rounakdatta/GoDFS/daemon/namenode"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/rounakdatta/GoDFS/daemon/client"
+	"github.com/rounakdatta/GoDFS/daemon/datanode"
+	"github.com/rounakdatta/GoDFS/daemon/namenode"
 )
 
 func main() {
@@ -22,6 +23,7 @@ func main() {
 	nameNodeListPtr := nameNodeCommand.String("datanodes", "", "Comma-separated list of DataNodes to connect to")
 	nameNodeBlockSizePtr := nameNodeCommand.Int("block-size", 32, "Block size to store")
 	nameNodeReplicationFactorPtr := nameNodeCommand.Int("replication-factor", 1, "Replication factor of the system")
+	nameNodeIsPrimary := nameNodeCommand.Bool("is-primary", true, "If this NameNode is primary")
 
 	clientNameNodePortPtr := clientCommand.String("namenode", "localhost:9000", "NameNode communication port")
 	clientOperationPtr := clientCommand.String("operation", "", "Operation to perform")
@@ -46,7 +48,7 @@ func main() {
 		} else {
 			listOfDataNodes = []string{}
 		}
-		namenode.InitializeNameNodeUtil(*nameNodePortPtr, *nameNodeBlockSizePtr, *nameNodeReplicationFactorPtr, listOfDataNodes)
+		namenode.InitializeNameNodeUtil(*nameNodePortPtr, *nameNodeBlockSizePtr, *nameNodeReplicationFactorPtr, *nameNodeIsPrimary, listOfDataNodes)
 
 	case "client":
 		_ = clientCommand.Parse(os.Args[2:])

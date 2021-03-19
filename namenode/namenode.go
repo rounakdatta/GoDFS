@@ -1,14 +1,15 @@
 package namenode
 
 import (
-	"github.com/google/uuid"
-	"github.com/rounakdatta/GoDFS/datanode"
-	"github.com/rounakdatta/GoDFS/util"
 	"log"
 	"math"
 	"math/rand"
 	"net/rpc"
 	"strings"
+
+	"github.com/google/uuid"
+	"github.com/rounakdatta/GoDFS/datanode"
+	"github.com/rounakdatta/GoDFS/util"
 )
 
 type NameNodeMetaData struct {
@@ -65,6 +66,13 @@ func selectRandomNumbers(availableItems []uint64, count uint64) (randomNumberSet
 		}
 	}
 	return
+}
+
+func (nameNode *Service) GetState(request bool, reply *Service) error {
+	if request {
+		reply = nameNode
+	}
+	return nil
 }
 
 func (nameNode *Service) GetBlockSize(request bool, reply *uint64) error {
