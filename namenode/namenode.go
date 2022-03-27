@@ -1,28 +1,38 @@
 package namenode
 
 import (
-	"github.com/google/uuid"
-	"github.com/rounakdatta/GoDFS/datanode"
-	"github.com/rounakdatta/GoDFS/util"
 	"log"
 	"math"
 	"math/rand"
 	"net/rpc"
 	"strings"
+
+	"UFS/datanode"
+	"UFS/util"
+
+	"github.com/google/uuid"
 )
 
 type NameNodeMetaData struct {
-	BlockId        string
+	BlockPathVar   util.BlockPath
 	BlockAddresses []util.DataNodeInstance
 }
 
 type NameNodeReadRequest struct {
-	FileName string
+	ClientPathVar util.ClientPath
+}
+
+type NameNodeLsRequest struct {
+	DirPath string
+}
+
+type NameNodeSearchRequest struct {
+	ClientPathVar util.ClientPath
 }
 
 type NameNodeWriteRequest struct {
-	FileName string
-	FileSize uint64
+	ClientPathVar util.ClientPath
+	FileSize      uint64
 }
 
 type ReDistributeDataRequest struct {
@@ -30,27 +40,27 @@ type ReDistributeDataRequest struct {
 }
 
 type UnderReplicatedBlocks struct {
-	BlockId           string
+	BlockPathVar      util.BlockPath
 	HealthyDataNodeId uint64
 }
 
 type Service struct {
-	Port               uint16
-	BlockSize          uint64
-	ReplicationFactor  uint64
-	IdToDataNodes      map[uint64]util.DataNodeInstance
-	FileNameToBlocks   map[string][]string
-	BlockToDataNodeIds map[string][]uint64
+	Port                   uint16
+	BlockSize              uint64
+	ReplicationFactor      uint64
+	IdToDataNodes          map[uint64]util.DataNodeInstance
+	ClientPathToBlockPath  map[util.ClientPath][]util.BlockPath
+	BlockPathToDataNodeIds map[util.BlockPath][]uint64
 }
 
 func NewService(blockSize uint64, replicationFactor uint64, serverPort uint16) *Service {
 	return &Service{
-		Port:               serverPort,
-		BlockSize:          blockSize,
-		ReplicationFactor:  replicationFactor,
-		FileNameToBlocks:   make(map[string][]string),
-		IdToDataNodes:      make(map[uint64]util.DataNodeInstance),
-		BlockToDataNodeIds: make(map[string][]uint64),
+		Port:                   serverPort,
+		BlockSize:              blockSize,
+		ReplicationFactor:      replicationFactor,
+		ClientPathToBlockPath:  make(map[util.ClientPath][]util.BlockPath),
+		IdToDataNodes:          make(map[uint64]util.DataNodeInstance),
+		BlockPathToDataNodeIds: make(map[util.BlockPath][]uint64),
 	}
 }
 
@@ -75,31 +85,38 @@ func (nameNode *Service) GetBlockSize(request bool, reply *uint64) error {
 }
 
 func (nameNode *Service) ReadData(request *NameNodeReadRequest, reply *[]NameNodeMetaData) error {
-	fileBlocks := nameNode.FileNameToBlocks[request.FileName]
+	fileBlocks := nameNode.ClientPathToBlockPath[request.ClientPathVar]
 
-	for _, block := range fileBlocks {
+	for _, blockPath := range fileBlocks {
 		var blockAddresses []util.DataNodeInstance
 
-		targetDataNodeIds := nameNode.BlockToDataNodeIds[block]
+		targetDataNodeIds := nameNode.BlockPathToDataNodeIds[blockPath]
 		for _, dataNodeId := range targetDataNodeIds {
 			blockAddresses = append(blockAddresses, nameNode.IdToDataNodes[dataNodeId])
 		}
 
-		*reply = append(*reply, NameNodeMetaData{BlockId: block, BlockAddresses: blockAddresses})
+		*reply = append(*reply, NameNodeMetaData{BlockPathVar: blockPath, BlockAddresses: blockAddresses})
 	}
 	return nil
 }
 
 func (nameNode *Service) WriteData(request *NameNodeWriteRequest, reply *[]NameNodeMetaData) error {
-	nameNode.FileNameToBlocks[request.FileName] = []string{}
+	nameNode.ClientPathToBlockPath[request.ClientPathVar] = []util.BlockPath{}
 
-	numberOfBlocksToAllocate := uint64(math.Ceil(float64(request.FileSize) / float64(nameNode.BlockSize)))
-	*reply = nameNode.allocateBlocks(request.FileName, numberOfBlocksToAllocate)
+	var numberOfBlocksToAllocate uint64
+	if request.FileSize != 0 { // we write a file
+		numberOfBlocksToAllocate = uint64(math.Ceil(float64(request.FileSize) / float64(nameNode.BlockSize)))
+	} else { // we create a directory
+		numberOfBlocksToAllocate = uint64(1) // we want only one block, in particular, only the directory
+	}
+
+	*reply = nameNode.allocateBlocks(request.ClientPathVar, numberOfBlocksToAllocate)
 	return nil
 }
 
-func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64) (metadata []NameNodeMetaData) {
-	nameNode.FileNameToBlocks[fileName] = []string{}
+func (nameNode *Service) allocateBlocks(clientPath util.ClientPath, numberOfBlocks uint64) (metadata []NameNodeMetaData) {
+	nameNode.ClientPathToBlockPath[clientPath] = []util.BlockPath{}
+
 	var dataNodesAvailable []uint64
 	for k, _ := range nameNode.IdToDataNodes {
 		dataNodesAvailable = append(dataNodesAvailable, k)
@@ -107,8 +124,14 @@ func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64) 
 	dataNodesAvailableCount := uint64(len(dataNodesAvailable))
 
 	for i := uint64(0); i < numberOfBlocks; i++ {
-		blockId := uuid.New().String()
-		nameNode.FileNameToBlocks[fileName] = append(nameNode.FileNameToBlocks[fileName], blockId)
+		var blockId string
+		if clientPath.FileName != "" { // create Id only for files
+			blockId = uuid.New().String()
+		}
+
+		// here we add the machine name to the block path
+		blockPath := util.BlockPath{MachineName: clientPath.MachineName, SourcePath: clientPath.SourcePath, BlockId: blockId}
+		nameNode.ClientPathToBlockPath[clientPath] = append(nameNode.ClientPathToBlockPath[clientPath], blockPath)
 
 		var blockAddresses []util.DataNodeInstance
 		var replicationFactor uint64
@@ -118,19 +141,19 @@ func (nameNode *Service) allocateBlocks(fileName string, numberOfBlocks uint64) 
 			replicationFactor = nameNode.ReplicationFactor
 		}
 
-		targetDataNodeIds := nameNode.assignDataNodes(blockId, dataNodesAvailable, replicationFactor)
+		targetDataNodeIds := nameNode.assignDataNodes(blockPath, dataNodesAvailable, replicationFactor)
 		for _, dataNodeId := range targetDataNodeIds {
 			blockAddresses = append(blockAddresses, nameNode.IdToDataNodes[dataNodeId])
 		}
 
-		metadata = append(metadata, NameNodeMetaData{BlockId: blockId, BlockAddresses: blockAddresses})
+		metadata = append(metadata, NameNodeMetaData{BlockPathVar: blockPath, BlockAddresses: blockAddresses})
 	}
 	return
 }
 
-func (nameNode *Service) assignDataNodes(blockId string, dataNodesAvailable []uint64, replicationFactor uint64) []uint64 {
+func (nameNode *Service) assignDataNodes(blockPath util.BlockPath, dataNodesAvailable []uint64, replicationFactor uint64) []uint64 {
 	targetDataNodeIds := selectRandomNumbers(dataNodesAvailable, replicationFactor)
-	nameNode.BlockToDataNodeIds[blockId] = targetDataNodeIds
+	nameNode.BlockPathToDataNodeIds[blockPath] = targetDataNodeIds
 	return targetDataNodeIds
 }
 
@@ -151,15 +174,15 @@ func (nameNode *Service) ReDistributeData(request *ReDistributeDataRequest, repl
 	// construct under-replicated blocks list and
 	// de-register the block entirely in favour of re-creation
 	var underReplicatedBlocksList []UnderReplicatedBlocks
-	for blockId, dnIds := range nameNode.BlockToDataNodeIds {
+	for blockPath, dnIds := range nameNode.BlockPathToDataNodeIds {
 		for i, dnId := range dnIds {
 			if dnId == deadDataNodeId {
-				healthyDataNodeId := nameNode.BlockToDataNodeIds[blockId][(i+1)%len(dnIds)]
+				healthyDataNodeId := nameNode.BlockPathToDataNodeIds[blockPath][(i+1)%len(dnIds)]
 				underReplicatedBlocksList = append(
 					underReplicatedBlocksList,
-					UnderReplicatedBlocks{blockId, healthyDataNodeId},
+					UnderReplicatedBlocks{blockPath, healthyDataNodeId},
 				)
-				delete(nameNode.BlockToDataNodeIds, blockId)
+				delete(nameNode.BlockPathToDataNodeIds, blockPath)
 				// TODO: trigger data deletion on the existing data nodes
 				break
 			}
@@ -173,7 +196,7 @@ func (nameNode *Service) ReDistributeData(request *ReDistributeDataRequest, repl
 	}
 
 	var availableNodes []uint64
-	for k, _ := range nameNode.IdToDataNodes {
+	for k := range nameNode.IdToDataNodes {
 		availableNodes = append(availableNodes, k)
 	}
 
@@ -190,7 +213,7 @@ func (nameNode *Service) ReDistributeData(request *ReDistributeDataRequest, repl
 		defer dataNodeInstance.Close()
 
 		getRequest := datanode.DataNodeGetRequest{
-			BlockId: blockToReplicate.BlockId,
+			BlockPathVar: blockToReplicate.BlockPathVar,
 		}
 		var getReply datanode.DataNodeData
 
@@ -199,7 +222,7 @@ func (nameNode *Service) ReDistributeData(request *ReDistributeDataRequest, repl
 		blockContents := getReply.Data
 
 		// initiate the replication of the block contents
-		targetDataNodeIds := nameNode.assignDataNodes(blockToReplicate.BlockId, availableNodes, nameNode.ReplicationFactor)
+		targetDataNodeIds := nameNode.assignDataNodes(blockToReplicate.BlockPathVar, availableNodes, nameNode.ReplicationFactor)
 		var blockAddresses []util.DataNodeInstance
 		for _, dataNodeId := range targetDataNodeIds {
 			blockAddresses = append(blockAddresses, nameNode.IdToDataNodes[dataNodeId])
@@ -212,7 +235,7 @@ func (nameNode *Service) ReDistributeData(request *ReDistributeDataRequest, repl
 		defer targetDataNodeInstance.Close()
 
 		putRequest := datanode.DataNodePutRequest{
-			BlockId:          blockToReplicate.BlockId,
+			BlockPathVar:     blockToReplicate.BlockPathVar,
 			Data:             blockContents,
 			ReplicationNodes: remainingDataNodes,
 		}
@@ -221,8 +244,75 @@ func (nameNode *Service) ReDistributeData(request *ReDistributeDataRequest, repl
 		rpcErr = targetDataNodeInstance.Call("Service.PutData", putRequest, &putReply)
 		util.Check(rpcErr)
 
-		log.Printf("Block %s replication completed for %+v\n", blockToReplicate.BlockId, targetDataNodeIds)
+		log.Printf("Block %s replication completed for %+v datanodes\n", blockToReplicate.BlockPathVar.BlockId, targetDataNodeIds)
 	}
 
+	return nil
+}
+
+func (nameNode *Service) Ls(request *NameNodeLsRequest, reply *string) error {
+	dirPath := request.DirPath
+	if dirPath == "" {
+		return nil
+	}
+
+	for k, _ := range nameNode.ClientPathToBlockPath {
+		fullPath := k.MachineName + k.SourcePath + k.FileName
+
+		res := strings.HasPrefix(fullPath, dirPath)
+		if res {
+			suffix := strings.TrimPrefix(fullPath, dirPath)
+			if dirPath[len(dirPath)-1:] == "/" {
+				suffixes := strings.Split(suffix, "/")
+				if !strings.Contains(*reply, suffix) {
+					if len(suffixes) > 1 {
+						*reply += suffixes[0] + "/ "
+					} else {
+						*reply += suffixes[0] + " "
+					}
+				}
+			} else if suffix[:1] == "/" {
+				suffixes := strings.Split(suffix[1:], "/")
+				if !strings.Contains(*reply, suffix) {
+					if len(suffixes) > 1 {
+						*reply += suffixes[0] + "/ "
+					} else {
+						*reply += suffixes[0] + " "
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (nameNode *Service) Search(request *NameNodeSearchRequest, reply *string) error {
+	clientPath := request.ClientPathVar.MachineName + request.ClientPathVar.SourcePath + request.ClientPathVar.FileName
+
+	for k, _ := range nameNode.ClientPathToBlockPath {
+		fullPath := k.MachineName + k.SourcePath + k.FileName
+
+		if fullPath == clientPath {
+			*reply = clientPath
+			return nil
+		} else {
+			res := strings.HasPrefix(fullPath, clientPath)
+			if res {
+				suffix := strings.TrimPrefix(fullPath, clientPath)
+				if clientPath[len(clientPath)-1:] == "/" {
+					suffix = strings.Split(suffix, "/")[0]
+					*reply = clientPath
+					return nil
+				} else if suffix[:1] == "/" {
+					suffix = strings.Split(suffix[1:], "/")[0]
+					*reply = clientPath
+					return nil
+				}
+			}
+		}
+	}
+
+	*reply = "No items found"
 	return nil
 }

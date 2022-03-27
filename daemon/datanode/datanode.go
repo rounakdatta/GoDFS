@@ -2,12 +2,13 @@ package datanode
 
 import (
 	"errors"
-	"github.com/rounakdatta/GoDFS/datanode"
-	"github.com/rounakdatta/GoDFS/util"
 	"log"
 	"net"
 	"net/rpc"
 	"strconv"
+
+	"UFS/datanode"
+	"UFS/util"
 )
 
 func InitializeDataNodeUtil(serverPort int, dataLocation string) {

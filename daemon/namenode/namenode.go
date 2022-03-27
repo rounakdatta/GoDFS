@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rounakdatta/GoDFS/datanode"
-	"github.com/rounakdatta/GoDFS/namenode"
-	"github.com/rounakdatta/GoDFS/util"
+	"UFS/datanode"
+	"UFS/namenode"
+	"UFS/util"
 )
 
 func removeElementFromSlice(elements []string, index int) []string {

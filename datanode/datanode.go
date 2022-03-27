@@ -3,11 +3,12 @@ package datanode
 import (
 	"bufio"
 	"errors"
-	"github.com/rounakdatta/GoDFS/util"
 	"io/ioutil"
 	"log"
 	"net/rpc"
 	"os"
+
+	"UFS/util"
 )
 
 type Service struct {
@@ -18,13 +19,13 @@ type Service struct {
 }
 
 type DataNodePutRequest struct {
-	BlockId          string
+	BlockPathVar     util.BlockPath
 	Data             string
 	ReplicationNodes []util.DataNodeInstance
 }
 
 type DataNodeGetRequest struct {
-	BlockId string
+	BlockPathVar util.BlockPath
 }
 
 type DataNodeWriteStatus struct {
@@ -63,7 +64,6 @@ func (dataNode *Service) Heartbeat(request bool, response *bool) error {
 }
 
 func (dataNode *Service) forwardForReplication(request *DataNodePutRequest, reply *DataNodeWriteStatus) error {
-	blockId := request.BlockId
 	blockAddresses := request.ReplicationNodes
 
 	if len(blockAddresses) == 0 {
@@ -78,7 +78,7 @@ func (dataNode *Service) forwardForReplication(request *DataNodePutRequest, repl
 	defer dataNodeInstance.Close()
 
 	payloadRequest := DataNodePutRequest{
-		BlockId:          blockId,
+		BlockPathVar:     request.BlockPathVar,
 		Data:             request.Data,
 		ReplicationNodes: remainingDataNodes,
 	}
@@ -89,7 +89,19 @@ func (dataNode *Service) forwardForReplication(request *DataNodePutRequest, repl
 }
 
 func (dataNode *Service) PutData(request *DataNodePutRequest, reply *DataNodeWriteStatus) error {
-	fileWriteHandler, err := os.Create(dataNode.DataDirectory + request.BlockId)
+	// here we construct the data node path, including the data directory
+	dirPath := dataNode.DataDirectory + "/" + request.BlockPathVar.MachineName + request.BlockPathVar.SourcePath
+
+	err := os.MkdirAll(dirPath, 0777)
+	util.Check(err)
+
+	if request.BlockPathVar.BlockId == "" { // for directories, no data to write
+		return dataNode.forwardForReplication(request, reply)
+	}
+
+	fullPath := dirPath + request.BlockPathVar.BlockId
+	fileWriteHandler, err := os.Create(fullPath)
+
 	util.Check(err)
 	defer fileWriteHandler.Close()
 
@@ -103,7 +115,10 @@ func (dataNode *Service) PutData(request *DataNodePutRequest, reply *DataNodeWri
 }
 
 func (dataNode *Service) GetData(request *DataNodeGetRequest, reply *DataNodeData) error {
-	dataBytes, err := ioutil.ReadFile(dataNode.DataDirectory + request.BlockId)
+	// here we construct the data node path, including the data directory
+	fullPath := dataNode.DataDirectory + "/" + request.BlockPathVar.MachineName + request.BlockPathVar.SourcePath + request.BlockPathVar.BlockId
+
+	dataBytes, err := ioutil.ReadFile(fullPath)
 	util.Check(err)
 
 	*reply = DataNodeData{Data: string(dataBytes)}

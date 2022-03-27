@@ -1,20 +1,22 @@
 package client
 
 import (
-	"github.com/rounakdatta/GoDFS/datanode"
-	"github.com/rounakdatta/GoDFS/namenode"
-	"github.com/rounakdatta/GoDFS/util"
 	"net/rpc"
 	"os"
+
+	"UFS/datanode"
+	"UFS/namenode"
+	"UFS/util"
 )
 
-func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putStatus bool) {
-	fullFilePath := sourcePath + fileName
-	fileSizeHandler, err := os.Stat(fullFilePath)
+func Put(nameNodeInstance *rpc.Client, clientPath util.ClientPath) (putStatus bool) {
+	// we deal with client files, so no data directory
+	fullPath := clientPath.SourcePath + clientPath.FileName
+	fileSizeHandler, err := os.Stat(fullPath)
 	util.Check(err)
 
 	fileSize := uint64(fileSizeHandler.Size())
-	request := namenode.NameNodeWriteRequest{FileName: fileName, FileSize: fileSize}
+	request := namenode.NameNodeWriteRequest{ClientPathVar: clientPath, FileSize: fileSize}
 	var reply []namenode.NameNodeMetaData
 
 	err = nameNodeInstance.Call("Service.WriteData", request, &reply)
@@ -24,7 +26,7 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 	err = nameNodeInstance.Call("Service.GetBlockSize", true, &blockSize)
 	util.Check(err)
 
-	fileHandler, err := os.Open(fullFilePath)
+	fileHandler, err := os.Open(fullPath)
 	util.Check(err)
 
 	dataStagingBytes := make([]byte, blockSize)
@@ -33,7 +35,7 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 		util.Check(err)
 		dataStagingBytes = dataStagingBytes[:n]
 
-		blockId := metaData.BlockId
+		blockPath := metaData.BlockPathVar
 		blockAddresses := metaData.BlockAddresses
 
 		startingDataNode := blockAddresses[0]
@@ -44,7 +46,7 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 		defer dataNodeInstance.Close()
 
 		request := datanode.DataNodePutRequest{
-			BlockId:          blockId,
+			BlockPathVar:     blockPath,
 			Data:             string(dataStagingBytes),
 			ReplicationNodes: remainingDataNodes,
 		}
@@ -57,8 +59,40 @@ func Put(nameNodeInstance *rpc.Client, sourcePath string, fileName string) (putS
 	return
 }
 
-func Get(nameNodeInstance *rpc.Client, fileName string) (fileContents string, getStatus bool) {
-	request := namenode.NameNodeReadRequest{FileName: fileName}
+func Putd(nameNodeInstance *rpc.Client, clientPath util.ClientPath) (putStatus bool) {
+	request := namenode.NameNodeWriteRequest{ClientPathVar: clientPath, FileSize: 0}
+	var reply []namenode.NameNodeMetaData
+
+	err := nameNodeInstance.Call("Service.WriteData", request, &reply)
+	util.Check(err)
+
+	for _, metaData := range reply {
+		blockPath := metaData.BlockPathVar
+		blockAddresses := metaData.BlockAddresses
+
+		startingDataNode := blockAddresses[0]
+		remainingDataNodes := blockAddresses[1:]
+
+		dataNodeInstance, rpcErr := rpc.Dial("tcp", startingDataNode.Host+":"+startingDataNode.ServicePort)
+		util.Check(rpcErr)
+		defer dataNodeInstance.Close()
+
+		request := datanode.DataNodePutRequest{
+			BlockPathVar:     blockPath,
+			Data:             "",
+			ReplicationNodes: remainingDataNodes,
+		}
+		var reply datanode.DataNodeWriteStatus
+
+		rpcErr = dataNodeInstance.Call("Service.PutData", request, &reply)
+		util.Check(rpcErr)
+		putStatus = true
+	}
+	return
+}
+
+func Get(nameNodeInstance *rpc.Client, clientPath util.ClientPath) (fileContents string, getStatus bool) {
+	request := namenode.NameNodeReadRequest{ClientPathVar: clientPath}
 	var reply []namenode.NameNodeMetaData
 
 	err := nameNodeInstance.Call("Service.ReadData", request, &reply)
@@ -67,7 +101,7 @@ func Get(nameNodeInstance *rpc.Client, fileName string) (fileContents string, ge
 	fileContents = ""
 
 	for _, metaData := range reply {
-		blockId := metaData.BlockId
+		blockPath := metaData.BlockPathVar
 		blockAddresses := metaData.BlockAddresses
 		blockFetchStatus := false
 
@@ -80,7 +114,7 @@ func Get(nameNodeInstance *rpc.Client, fileName string) (fileContents string, ge
 			defer dataNodeInstance.Close()
 
 			request := datanode.DataNodeGetRequest{
-				BlockId: blockId,
+				BlockPathVar: blockPath,
 			}
 			var reply datanode.DataNodeData
 
@@ -99,4 +133,20 @@ func Get(nameNodeInstance *rpc.Client, fileName string) (fileContents string, ge
 
 	getStatus = true
 	return
+}
+
+func Ls(nameNodeInstance *rpc.Client, dirPath string) string {
+	request := namenode.NameNodeLsRequest{DirPath: dirPath}
+	var reply string
+	err := nameNodeInstance.Call("Service.Ls", request, &reply)
+	util.Check(err)
+	return reply
+}
+
+func Search(nameNodeInstance *rpc.Client, clientPath util.ClientPath) string {
+	request := namenode.NameNodeSearchRequest{ClientPathVar: clientPath}
+	var reply string
+	err := nameNodeInstance.Call("Service.Search", request, &reply)
+	util.Check(err)
+	return reply
 }
